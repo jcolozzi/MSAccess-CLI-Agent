@@ -1,26 +1,26 @@
 # MSAccess-agent
 
-**Access-POSH.ps1** is a port of the Python unmateria/MCP-Access server (54+ tools) to native PowerShell.
+**AccessPOSH** is a PowerShell module port of the Python unmateria/MCP-Access server (59 tools) to native PowerShell.
 
 No MCP server needed — A custom access-dev agent calls functions directly via terminal.
 
-The agent will use the **Access-POSH.ps1** PowerShell script to interact with Access databases via COM automation. 
+The agent will use the **AccessPOSH** module to interact with Access databases via COM automation. 
 
 Setup:
 1. Clone or download the repo
-2. Put the two .md files in C:\Users\\%USERNAME%\AppData\Roaming\Code\User\prompts folder or create .gituhb\agents folder in your project folder and save the two .md files to there (_VS Code detects any .md files in the .github/agents folder of your workspace as custom agents_)
-3. Replace the path in the .md files to the location of the **Access-POSH.ps1** script on your computer
+2. Put the two .md files in C:\Users\\%USERNAME%\AppData\Roaming\Code\User\prompts folder or create .github\agents folder in your project folder and save the two .md files to there (_VS Code detects any .md files in the .github/agents folder of your workspace as custom agents_)
+3. Replace the path in the .md files to the location of the **AccessPOSH** module on your computer
 4. Select access-dev as the agent
 
-## Available Functions (54 public)
+## Available Functions (59 public)
 
 | Category | Functions |
 |----------|-----------|
-| **Database** | `New-AccessDatabase`, `Close-AccessDatabase`, `Repair-AccessDatabase` |
+| **Database** | `New-AccessDatabase`, `Close-AccessDatabase`, `Repair-AccessDatabase`, `Invoke-AccessDecompile` |
 | **Objects** | `Get-AccessObject`, `Get-AccessCode`, `Set-AccessCode`, `Remove-AccessObject`, `Export-AccessStructure` |
 | **SQL** | `Invoke-AccessSQL`, `Invoke-AccessSQLBatch` |
 | **Tables** | `Get-AccessTableInfo`, `New-AccessTable`, `Edit-AccessTable` |
-| **VBE** | `Get-AccessVbeLine`, `Get-AccessVbeProc`, `Get-AccessVbeModuleInfo`, `Set-AccessVbeLine`, `Set-AccessVbeProc`, `Add-AccessVbeCode` |
+| **VBE** | `Get-AccessVbeLine`, `Get-AccessVbeProc`, `Get-AccessVbeModuleInfo`, `Set-AccessVbeLine`, `Set-AccessVbeProc`, `Update-AccessVbeProc`, `Add-AccessVbeCode` |
 | **Search** | `Find-AccessVbeText`, `Search-AccessVbe`, `Search-AccessQuery`, `Find-AccessUsage` |
 | **VBA Exec** | `Invoke-AccessMacro`, `Invoke-AccessVba`, `Invoke-AccessEval`, `Test-AccessVbaCompile` |
 | **Forms** | `New-AccessForm`, `Get-AccessFormProperty`, `Set-AccessFormProperty` |
