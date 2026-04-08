@@ -1,6 +1,6 @@
 # MSAccess-agent
 
-**AccessPOSH** is a PowerShell module port of the Python unmateria/MCP-Access server, expanded to 77 native PowerShell functions.
+**AccessPOSH** is a PowerShell module port of the Python unmateria/MCP-Access server, expanded to 91 native PowerShell functions.
 
 No MCP server needed — A custom access-dev agent calls functions directly via terminal.
 
@@ -12,7 +12,7 @@ Setup:
 3. Replace the path in the .md files to the location of the **AccessPOSH.psd1** module on your computer
 4. Select access-dev from the agent picker before prompting
 
-## Available Functions (77 public)
+## Available Functions (91 public)
 
 | Category | Functions |
 |----------|-----------|
@@ -40,3 +40,8 @@ Setup:
 | **Security** | `Test-AccessDatabasePassword`, `Set-AccessDatabasePassword`, `Remove-AccessDatabasePassword`, `Get-AccessDatabaseEncryption` |
 | **Reports** | `New-AccessReport`, `Get-AccessGroupLevel`, `Set-AccessGroupLevel`, `Remove-AccessGroupLevel` |
 | **SubDataSheets** | `Get-AccessSubDataSheet`, `Set-AccessSubDataSheet` |
+| **Navigation Pane** | `Show-AccessNavigationPane`, `Hide-AccessNavigationPane`, `Set-AccessNavigationPaneLock` |
+| **Ribbon** | `Get-AccessRibbon`, `Set-AccessRibbon`, `Remove-AccessRibbon` |
+| **Application** | `Get-AccessApplicationInfo`, `Test-AccessRuntime`, `Get-AccessFileInfo` |
+| **Themes** | `Get-AccessTheme`, `Set-AccessTheme`, `Get-AccessThemeList` |
+| **Print** | `Export-AccessFilteredReport`, `Send-AccessReportToPrinter` |

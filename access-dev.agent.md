@@ -126,7 +126,44 @@ Set-AccessSubDataSheet -DbPath $db -TableName "tblCustomers" -SubDataSheetName "
 Set-AccessSubDataSheet -DbPath $db -TableName "tblCustomers" -SubDataSheetName "[None]" -AsJson  # remove
 ```
 
-## Available Functions (77 public)
+**Navigation Pane:**
+```powershell
+Show-AccessNavigationPane -DbPath $db -AsJson
+Hide-AccessNavigationPane -DbPath $db -AsJson
+Set-AccessNavigationPaneLock -DbPath $db -Locked $true -AsJson
+Set-AccessNavigationPaneLock -DbPath $db -Locked $false -AsJson
+```
+
+**Custom Ribbon:**
+```powershell
+Get-AccessRibbon -DbPath $db -AsJson                        # list all ribbons
+Get-AccessRibbon -DbPath $db -RibbonName "MyRibbon" -AsJson  # get specific
+Set-AccessRibbon -DbPath $db -RibbonName "MyRibbon" -RibbonXml $xml -SetAsDefault -AsJson
+Remove-AccessRibbon -DbPath $db -RibbonName "MyRibbon" -AsJson
+```
+
+**Application Info:**
+```powershell
+Get-AccessApplicationInfo -DbPath $db -AsJson   # version, build, bitness, runtime
+Test-AccessRuntime -DbPath $db -AsJson          # quick runtime check
+Get-AccessFileInfo -DbPath $db -AsJson          # file size, dates, format, object counts
+```
+
+**Themes:**
+```powershell
+Get-AccessTheme -DbPath $db -ObjectName "frmMain" -ObjectType form -AsJson
+Set-AccessTheme -DbPath $db -ObjectName "frmMain" -ThemeName "Office" -AsJson
+Get-AccessThemeList -DbPath $db -AsJson
+```
+
+**Filtered Printing:**
+```powershell
+Export-AccessFilteredReport -DbPath $db -ReportName "rptSales" -WhereCondition "CustomerID = 5" -OutputFormat pdf -AsJson
+Send-AccessReportToPrinter -DbPath $db -ReportName "rptSales" -WhereCondition "Region = 'East'" -Copies 2 -AsJson
+Send-AccessReportToPrinter -DbPath $db -ReportName "rptSales" -PrintRange pages -FromPage 1 -ToPage 3 -AsJson
+```
+
+## Available Functions (91 public)
 
 | Category | Functions |
 |----------|-----------|
@@ -154,6 +191,11 @@ Set-AccessSubDataSheet -DbPath $db -TableName "tblCustomers" -SubDataSheetName "
 | **Security** | `Test-AccessDatabasePassword`, `Set-AccessDatabasePassword`, `Remove-AccessDatabasePassword`, `Get-AccessDatabaseEncryption` |
 | **Reports** | `New-AccessReport`, `Get-AccessGroupLevel`, `Set-AccessGroupLevel`, `Remove-AccessGroupLevel` |
 | **SubDataSheets** | `Get-AccessSubDataSheet`, `Set-AccessSubDataSheet` |
+| **Navigation Pane** | `Show-AccessNavigationPane`, `Hide-AccessNavigationPane`, `Set-AccessNavigationPaneLock` |
+| **Ribbon** | `Get-AccessRibbon`, `Set-AccessRibbon`, `Remove-AccessRibbon` |
+| **Application** | `Get-AccessApplicationInfo`, `Test-AccessRuntime`, `Get-AccessFileInfo` |
+| **Themes** | `Get-AccessTheme`, `Set-AccessTheme`, `Get-AccessThemeList` |
+| **Print** | `Export-AccessFilteredReport`, `Send-AccessReportToPrinter` |
 
 ## Rules
 

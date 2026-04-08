@@ -3,7 +3,7 @@
     ModuleVersion     = '1.0.0'
     GUID              = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
     Author            = 'Access-POSH'
-    Description       = 'PowerShell Access Database Automation via COM — port of MCP-Access (77 tools)'
+    Description       = 'PowerShell Access Database Automation via COM — port of MCP-Access (91 tools)'
     PowerShellVersion = '5.1'
 
     FunctionsToExport = @(
@@ -117,6 +117,30 @@
         # SubDataSheets
         'Get-AccessSubDataSheet'
         'Set-AccessSubDataSheet'
+
+        # Navigation Pane
+        'Show-AccessNavigationPane'
+        'Hide-AccessNavigationPane'
+        'Set-AccessNavigationPaneLock'
+
+        # Ribbon
+        'Get-AccessRibbon'
+        'Set-AccessRibbon'
+        'Remove-AccessRibbon'
+
+        # Application
+        'Get-AccessApplicationInfo'
+        'Test-AccessRuntime'
+        'Get-AccessFileInfo'
+
+        # Themes
+        'Get-AccessTheme'
+        'Set-AccessTheme'
+        'Get-AccessThemeList'
+
+        # Print
+        'Export-AccessFilteredReport'
+        'Send-AccessReportToPrinter'
     )
 
     CmdletsToExport   = @()
