@@ -3,7 +3,7 @@
     ModuleVersion     = '1.0.0'
     GUID              = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
     Author            = 'Access-POSH'
-    Description       = 'PowerShell Access Database Automation via COM — port of MCP-Access (59 tools)'
+    Description       = 'PowerShell Access Database Automation via COM — port of MCP-Access (77 tools)'
     PowerShellVersion = '5.1'
 
     FunctionsToExport = @(
@@ -89,6 +89,34 @@
         'Get-AccessScreenshot'
         'Send-AccessClick'
         'Send-AccessKeyboard'
+
+        # TempVars
+        'Get-AccessTempVar'
+        'Set-AccessTempVar'
+        'Remove-AccessTempVar'
+
+        # Import
+        'Import-AccessFromExcel'
+        'Import-AccessFromCSV'
+        'Import-AccessFromXML'
+        'Import-AccessFromDatabase'
+        'Export-AccessToExcel'
+
+        # Security
+        'Test-AccessDatabasePassword'
+        'Set-AccessDatabasePassword'
+        'Remove-AccessDatabasePassword'
+        'Get-AccessDatabaseEncryption'
+
+        # Reports
+        'New-AccessReport'
+        'Get-AccessGroupLevel'
+        'Set-AccessGroupLevel'
+        'Remove-AccessGroupLevel'
+
+        # SubDataSheets
+        'Get-AccessSubDataSheet'
+        'Set-AccessSubDataSheet'
     )
 
     CmdletsToExport   = @()

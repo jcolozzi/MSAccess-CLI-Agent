@@ -1,6 +1,6 @@
 # MSAccess-agent
 
-**AccessPOSH** is a PowerShell module port of the Python unmateria/MCP-Access server (59 tools) to native PowerShell.
+**AccessPOSH** is a PowerShell module port of the Python unmateria/MCP-Access server, expanded to 77 native PowerShell functions.
 
 No MCP server needed — A custom access-dev agent calls functions directly via terminal.
 
@@ -8,11 +8,11 @@ The agent will use the **AccessPOSH** module to interact with Access databases v
 
 Setup:
 1. Clone or download the repo
-2. Put the two .md files in C:\Users\\%USERNAME%\AppData\Roaming\Code\User\prompts folder or create .github\agents folder in your project folder and save the two .md files to there (_VS Code detects any .md files in the .github/agents folder of your workspace as custom agents_)
-3. Replace the path in the .md files to the location of the **AccessPOSH** module on your computer
-4. Select access-dev as the agent
+2. Put the two .md files in C:\Users\\%USERNAME%\AppData\Roaming\Code\User\prompts folder (user level access) or create a .github\agents folder in your project folder and save the two .md files in the agent folder (_VS Code detects any .md files in the .github/agents folder of your workspace as custom agents_)
+3. Replace the path in the .md files to the location of the **AccessPOSH.psd1** module on your computer
+4. Select access-dev from the agent picker before prompting
 
-## Available Functions (59 public)
+## Available Functions (77 public)
 
 | Category | Functions |
 |----------|-----------|
@@ -35,3 +35,8 @@ Setup:
 | **Export** | `Export-AccessReport`, `Copy-AccessData` |
 | **UI** | `Get-AccessScreenshot`, `Send-AccessClick`, `Send-AccessKeyboard` |
 | **Tips** | `Get-AccessTip` |
+| **TempVars** | `Get-AccessTempVar`, `Set-AccessTempVar`, `Remove-AccessTempVar` |
+| **Import** | `Import-AccessFromExcel`, `Import-AccessFromCSV`, `Import-AccessFromXML`, `Import-AccessFromDatabase`, `Export-AccessToExcel` |
+| **Security** | `Test-AccessDatabasePassword`, `Set-AccessDatabasePassword`, `Remove-AccessDatabasePassword`, `Get-AccessDatabaseEncryption` |
+| **Reports** | `New-AccessReport`, `Get-AccessGroupLevel`, `Set-AccessGroupLevel`, `Remove-AccessGroupLevel` |
+| **SubDataSheets** | `Get-AccessSubDataSheet`, `Set-AccessSubDataSheet` |

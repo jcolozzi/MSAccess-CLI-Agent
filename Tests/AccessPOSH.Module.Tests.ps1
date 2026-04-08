@@ -45,9 +45,9 @@ Describe 'AccessPOSH Module' {
             (Get-Module AccessPOSH).Version.ToString() | Should -Be '1.0.0'
         }
 
-        It 'Exports exactly 59 public functions' {
+        It 'Exports exactly 77 public functions' {
             $exported = (Get-Module AccessPOSH).ExportedFunctions.Keys
-            $exported.Count | Should -Be 59
+            $exported.Count | Should -Be 77
         }
     }
 
@@ -90,7 +90,20 @@ Describe 'AccessPOSH Module' {
             # ExportTransfer (2)
             'Export-AccessReport', 'Copy-AccessData',
             # UIAutomation (3)
-            'Get-AccessScreenshot', 'Send-AccessClick', 'Send-AccessKeyboard'
+            'Get-AccessScreenshot', 'Send-AccessClick', 'Send-AccessKeyboard',
+            # TempVarOps (3)
+            'Get-AccessTempVar', 'Set-AccessTempVar', 'Remove-AccessTempVar',
+            # ImportOps (5)
+            'Import-AccessFromExcel', 'Import-AccessFromCSV', 'Import-AccessFromXML',
+            'Import-AccessFromDatabase', 'Export-AccessToExcel',
+            # SecurityOps (4)
+            'Test-AccessDatabasePassword', 'Set-AccessDatabasePassword',
+            'Remove-AccessDatabasePassword', 'Get-AccessDatabaseEncryption',
+            # ReportOps (4)
+            'New-AccessReport', 'Get-AccessGroupLevel', 'Set-AccessGroupLevel',
+            'Remove-AccessGroupLevel',
+            # SubDataSheetOps (2)
+            'Get-AccessSubDataSheet', 'Set-AccessSubDataSheet'
         ) {
             $script:exported | Should -Contain $_
         }
@@ -136,9 +149,9 @@ Describe 'AccessPOSH Module' {
             $files.Count | Should -Be 5
         }
 
-        It 'Has 7 Public .ps1 files' {
+        It 'Has 12 Public .ps1 files' {
             $files = Get-ChildItem (Join-Path $PSScriptRoot '..\AccessPOSH\Public\*.ps1')
-            $files.Count | Should -Be 7
+            $files.Count | Should -Be 12
         }
     }
 

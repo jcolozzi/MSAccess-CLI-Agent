@@ -84,7 +84,49 @@ Repair-AccessDatabase -DbPath $db -AsJson
 Close-AccessDatabase
 ```
 
-## Available Functions (59 public)
+**TempVars:**
+```powershell
+Set-AccessTempVar -DbPath $db -Name "CurrentUser" -Value "jsmith" -AsJson
+Get-AccessTempVar -DbPath $db -Name "CurrentUser" -AsJson
+Get-AccessTempVar -DbPath $db -AsJson   # list all
+Remove-AccessTempVar -DbPath $db -Name "CurrentUser" -AsJson
+Remove-AccessTempVar -DbPath $db -AsJson # remove all
+```
+
+**Import/Export:**
+```powershell
+Import-AccessFromExcel -DbPath $db -ExcelPath "C:\data.xlsx" -TableName "tblImport" -HasFieldNames -AsJson
+Import-AccessFromCSV -DbPath $db -FilePath "C:\data.csv" -TableName "tblCSV" -HasFieldNames -AsJson
+Import-AccessFromXML -DbPath $db -XmlPath "C:\data.xml" -ImportOptions structureanddata -AsJson
+Import-AccessFromDatabase -DbPath $db -SourceDbPath "C:\other.accdb" -SourceObject "tblCustomers" -AsJson
+Export-AccessToExcel -DbPath $db -ObjectName "tblCustomers" -ExcelPath "C:\export.xlsx" -HasFieldNames -AsJson
+```
+
+**Security:**
+```powershell
+Test-AccessDatabasePassword -DbPath $db -AsJson
+Set-AccessDatabasePassword -DbPath $db -NewPassword "secret123" -AsJson
+Set-AccessDatabasePassword -DbPath $db -NewPassword "newpwd" -OldPassword "secret123" -AsJson
+Remove-AccessDatabasePassword -DbPath $db -CurrentPassword "newpwd" -AsJson
+Get-AccessDatabaseEncryption -DbPath $db -AsJson
+```
+
+**Reports and Grouping:**
+```powershell
+New-AccessReport -DbPath $db -ReportName "rptSales" -RecordSource "qrySales" -AsJson
+Set-AccessGroupLevel -DbPath $db -ReportName "rptSales" -Expression "Category" -GroupHeader -SortOrder ascending -AsJson
+Get-AccessGroupLevel -DbPath $db -ReportName "rptSales" -AsJson
+Remove-AccessGroupLevel -DbPath $db -ReportName "rptSales" -LevelIndex 0 -AsJson
+```
+
+**SubDataSheets:**
+```powershell
+Get-AccessSubDataSheet -DbPath $db -TableName "tblCustomers" -AsJson
+Set-AccessSubDataSheet -DbPath $db -TableName "tblCustomers" -SubDataSheetName "tblOrders" -LinkChildFields "CustomerID" -LinkMasterFields "CustomerID" -AsJson
+Set-AccessSubDataSheet -DbPath $db -TableName "tblCustomers" -SubDataSheetName "[None]" -AsJson  # remove
+```
+
+## Available Functions (77 public)
 
 | Category | Functions |
 |----------|-----------|
@@ -107,6 +149,11 @@ Close-AccessDatabase
 | **Export** | `Export-AccessReport`, `Copy-AccessData` |
 | **UI** | `Get-AccessScreenshot`, `Send-AccessClick`, `Send-AccessKeyboard` |
 | **Tips** | `Get-AccessTip` |
+| **TempVars** | `Get-AccessTempVar`, `Set-AccessTempVar`, `Remove-AccessTempVar` |
+| **Import** | `Import-AccessFromExcel`, `Import-AccessFromCSV`, `Import-AccessFromXML`, `Import-AccessFromDatabase`, `Export-AccessToExcel` |
+| **Security** | `Test-AccessDatabasePassword`, `Set-AccessDatabasePassword`, `Remove-AccessDatabasePassword`, `Get-AccessDatabaseEncryption` |
+| **Reports** | `New-AccessReport`, `Get-AccessGroupLevel`, `Set-AccessGroupLevel`, `Remove-AccessGroupLevel` |
+| **SubDataSheets** | `Get-AccessSubDataSheet`, `Set-AccessSubDataSheet` |
 
 ## Rules
 
