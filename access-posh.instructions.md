@@ -6,7 +6,7 @@ description: "Use when the user mentions Access databases (.accdb/.mdb), Access-
 When working with Microsoft Access databases, import the PowerShell module:
 
 ```powershell
-Import-Module "K:\Workgrp\PERSONAL SHARE\Colozzi\Access Agent\MSAccess-agent\AccessPOSH\AccessPOSH.psd1" -Force
+Import-Module "C:\PATH\TO\AccessPOSH.psd1" -Force
 ```
 
 This module provides 91 PowerShell functions for full Access database automation via COM. Use `-AsJson` on any function for structured output. The `@access-dev` agent has the complete function reference.

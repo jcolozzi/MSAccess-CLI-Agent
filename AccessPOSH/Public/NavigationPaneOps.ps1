@@ -10,9 +10,10 @@ function Show-AccessNavigationPane {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
+        [string]$DbPath,
         [switch]$AsJson
     )
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Show-AccessNavigationPane'
     $app = Connect-AccessDB -DbPath $DbPath
     try {
         $app.DoCmd.NavigateTo('acNavigationCategoryObjectType')
@@ -41,9 +42,10 @@ function Hide-AccessNavigationPane {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
+        [string]$DbPath,
         [switch]$AsJson
     )
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Hide-AccessNavigationPane'
     $app = Connect-AccessDB -DbPath $DbPath
     try {
         $app.DoCmd.SelectObject(2, '', $true)   # acForm, empty, InNavPane=True selects NavPane
@@ -73,10 +75,12 @@ function Set-AccessNavigationPaneLock {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][bool]$Locked,
+        [string]$DbPath,
+        [bool]$Locked,
         [switch]$AsJson
     )
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Set-AccessNavigationPaneLock'
+    if (-not $PSBoundParameters.ContainsKey('Locked')) { throw "Set-AccessNavigationPaneLock: -Locked is required." }
     $app = Connect-AccessDB -DbPath $DbPath
     $db = $app.CurrentDb()
 

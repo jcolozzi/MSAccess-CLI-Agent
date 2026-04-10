@@ -70,9 +70,11 @@ function New-AccessDatabase {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
+        [string]$DbPath,
         [switch]$AsJson
     )
+
+    if (-not $DbPath) { throw "New-AccessDatabase: -DbPath is required." }
 
     $resolved = [System.IO.Path]::GetFullPath($DbPath)
     if (Test-Path -LiteralPath $resolved) {
@@ -86,6 +88,11 @@ function New-AccessDatabase {
         } catch {
             throw "Failed to create Access.Application COM object. Is Microsoft Access installed? Error: $_"
         }
+        # Suppress dialogs for non-interactive automation
+        try {
+            $script:AccessSession.App.DisplayAlerts = $false
+            $script:AccessSession.App.AutomationSecurity = 1  # msoAutomationSecurityForceDisable
+        } catch {}
         Set-AccessVisibleBestEffort -Visible $true
     }
     $app = $script:AccessSession.App
@@ -136,9 +143,11 @@ function Repair-AccessDatabase {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
+        [string]$DbPath,
         [switch]$AsJson
     )
+
+    if (-not $DbPath) { throw "Repair-AccessDatabase: -DbPath is required." }
 
     $resolved = [System.IO.Path]::GetFullPath($DbPath)
     $app = Connect-AccessDB -DbPath $resolved
@@ -233,9 +242,11 @@ function Invoke-AccessDecompile {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
+        [string]$DbPath,
         [switch]$AsJson
     )
+
+    if (-not $DbPath) { throw "Invoke-AccessDecompile: -DbPath is required." }
 
     $resolved = [System.IO.Path]::GetFullPath($DbPath)
     if (-not (Test-Path -LiteralPath $resolved -PathType Leaf)) {
@@ -323,6 +334,11 @@ function Invoke-AccessDecompile {
     } catch {
         throw "Failed to relaunch Access COM after decompile: $_"
     }
+    # Suppress dialogs for non-interactive automation
+    try {
+        $script:AccessSession.App.DisplayAlerts = $false
+        $script:AccessSession.App.AutomationSecurity = 1  # msoAutomationSecurityForceDisable
+    } catch {}
     Set-AccessVisibleBestEffort -Visible $true
 
     try {
@@ -424,11 +440,13 @@ function Get-AccessObject {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
+        [string]$DbPath,
         [ValidateSet('all','table','query','form','report','macro','module')]
         [string]$ObjectType = 'all',
         [switch]$AsJson
     )
+
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Get-AccessObject'
 
     $app = Connect-AccessDB -DbPath $DbPath
     $containers = [ordered]@{
@@ -472,11 +490,15 @@ function Get-AccessCode {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][ValidateSet('query','form','report','macro','module')]
+        [string]$DbPath,
+        [ValidateSet('query','form','report','macro','module')]
         [string]$ObjectType,
-        [Parameter(Mandatory)][string]$Name
+        [string]$Name
     )
+
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Get-AccessCode'
+    if (-not $ObjectType) { throw "Get-AccessCode: -ObjectType is required (query, form, report, macro, module)." }
+    if (-not $Name) { throw "Get-AccessCode: -Name is required." }
 
     $app = Connect-AccessDB -DbPath $DbPath
     $tmp = [System.IO.Path]::GetTempFileName()
@@ -516,13 +538,18 @@ function Set-AccessCode {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][ValidateSet('query','form','report','macro','module')]
+        [string]$DbPath,
+        [ValidateSet('query','form','report','macro','module')]
         [string]$ObjectType,
-        [Parameter(Mandatory)][string]$Name,
-        [Parameter(Mandatory)][string]$Code,
+        [string]$Name,
+        [string]$Code,
         [switch]$AsJson
     )
+
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Set-AccessCode'
+    if (-not $ObjectType) { throw "Set-AccessCode: -ObjectType is required (query, form, report, macro, module)." }
+    if (-not $Name) { throw "Set-AccessCode: -Name is required." }
+    if (-not $Code) { throw "Set-AccessCode: -Code is required." }
 
     $app = Connect-AccessDB -DbPath $DbPath
 
@@ -616,13 +643,17 @@ function Remove-AccessObject {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][ValidateSet('query','form','report','macro','module')]
+        [string]$DbPath,
+        [ValidateSet('query','form','report','macro','module')]
         [string]$ObjectType,
-        [Parameter(Mandatory)][string]$Name,
+        [string]$Name,
         [switch]$Confirm,
         [switch]$AsJson
     )
+
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Remove-AccessObject'
+    if (-not $ObjectType) { throw "Remove-AccessObject: -ObjectType is required (query, form, report, macro, module)." }
+    if (-not $Name) { throw "Remove-AccessObject: -Name is required." }
 
     if (-not $Confirm) {
         throw "Destructive operation: -Confirm is required to delete an object."
@@ -660,10 +691,12 @@ function Export-AccessStructure {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
+        [string]$DbPath,
         [string]$OutputPath,
         [switch]$AsJson
     )
+
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Export-AccessStructure'
 
     if (-not $OutputPath) {
         $dir = [System.IO.Path]::GetDirectoryName([System.IO.Path]::GetFullPath($DbPath))
@@ -781,12 +814,15 @@ function Invoke-AccessSQL {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][string]$SQL,
+        [string]$DbPath,
+        [string]$SQL,
         [int]$Limit = 500,
         [switch]$ConfirmDestructive,
         [switch]$AsJson
     )
+
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Invoke-AccessSQL'
+    if (-not $SQL) { throw "Invoke-AccessSQL: -SQL is required." }
 
     $app = Connect-AccessDB -DbPath $DbPath
     $db  = $app.CurrentDb()
@@ -882,12 +918,15 @@ function Invoke-AccessSQLBatch {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][object[]]$Statements,
+        [string]$DbPath,
+        [object[]]$Statements,
         [bool]$StopOnError = $true,
         [switch]$ConfirmDestructive,
         [switch]$AsJson
     )
+
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Invoke-AccessSQLBatch'
+    if (-not $Statements -or $Statements.Count -eq 0) { throw "Invoke-AccessSQLBatch: -Statements is required." }
 
     if ($Statements.Count -eq 0) {
         return Format-AccessOutput -AsJson:$AsJson -Data @{ error = 'No SQL statements provided.' }

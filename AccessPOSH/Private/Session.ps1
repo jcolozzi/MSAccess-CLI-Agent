@@ -28,7 +28,7 @@ function Get-AccessHwnd {
     .SYNOPSIS
         Get the Access window handle. Handles hWndAccessApp being a property or method.
     #>
-    param([Parameter(Mandatory)]$App)
+    param($App)
 
     $h = $App.hWndAccessApp
     if ($h -is [System.Management.Automation.PSMethod]) {
@@ -61,6 +61,21 @@ function Clear-AccessCaches {
     $script:AccessSession.CmCache       = @{}
 }
 
+function Resolve-SessionDbPath {
+    <#
+    .SYNOPSIS
+        Resolve -DbPath: use explicit value if given, else fall back to active session.
+        Throws a terminating error if neither is available.
+    #>
+    param(
+        [string]$DbPath,
+        [string]$CallerName = 'AccessPOSH'
+    )
+    if ($DbPath) { return $DbPath }
+    if ($script:AccessSession.DbPath) { return $script:AccessSession.DbPath }
+    throw "${CallerName}: -DbPath is required (no active session). Open a database first."
+}
+
 function Connect-AccessDB {
     <#
     .SYNOPSIS
@@ -68,9 +83,9 @@ function Connect-AccessDB {
         Returns the COM Application object.
     #>
     param(
-        [Parameter(Mandatory)]
         [string]$DbPath
     )
+    if (-not $DbPath) { throw "Connect-AccessDB: -DbPath is required." }
 
     $resolved = [System.IO.Path]::GetFullPath($DbPath)
 
@@ -92,6 +107,11 @@ function Connect-AccessDB {
         } catch {
             throw "Failed to create Access.Application COM object. Is Microsoft Access installed? Error: $_"
         }
+        # Suppress dialogs for non-interactive automation
+        try {
+            $script:AccessSession.App.DisplayAlerts = $false
+            $script:AccessSession.App.AutomationSecurity = 1  # msoAutomationSecurityForceDisable
+        } catch {}
         Set-AccessVisibleBestEffort -Visible $true
         Write-Verbose 'Access launched OK'
     }

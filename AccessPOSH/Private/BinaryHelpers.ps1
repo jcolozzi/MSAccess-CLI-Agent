@@ -8,9 +8,9 @@ function Remove-BinarySections {
         Also removes the Checksum line (Access recalculates on import).
     #>
     param(
-        [Parameter(Mandatory)]
         [string]$Text
     )
+    if (-not $Text) { throw "Remove-BinarySections: -Text is required." }
 
     $lines = $Text.Split([string[]]@("`r`n", "`n"), [System.StringSplitOptions]::None)
     $result = [System.Collections.Generic.List[string]]::new($lines.Count)
@@ -58,9 +58,9 @@ function Get-BinaryBlocks {
         Returns a hashtable: { section_name = full_block_text }.
     #>
     param(
-        [Parameter(Mandatory)]
         [string]$Text
     )
+    if (-not $Text) { throw "Get-BinaryBlocks: -Text is required." }
 
     $blocks = @{}
     $lines = $Text.Split([string[]]@("`r`n", "`n"), [System.StringSplitOptions]::None)
@@ -107,11 +107,15 @@ function Restore-BinarySections {
         If the object doesn't exist yet, returns the code unmodified.
     #>
     param(
-        [Parameter(Mandatory)]$App,
-        [Parameter(Mandatory)][string]$ObjectType,
-        [Parameter(Mandatory)][string]$Name,
-        [Parameter(Mandatory)][string]$NewCode
+        $App,
+        [string]$ObjectType,
+        [string]$Name,
+        [string]$NewCode
     )
+    if (-not $App) { throw "Restore-BinarySections: -App is required." }
+    if (-not $ObjectType) { throw "Restore-BinarySections: -ObjectType is required." }
+    if (-not $Name) { throw "Restore-BinarySections: -Name is required." }
+    if (-not $NewCode) { throw "Restore-BinarySections: -NewCode is required." }
 
     $tmp = [System.IO.Path]::GetTempFileName()
     try {
@@ -164,8 +168,9 @@ function Split-CodeBehind {
         Returns [PSCustomObject]@{ FormText; VbaCode }
     #>
     param(
-        [Parameter(Mandatory)][string]$Code
+        [string]$Code
     )
+    if (-not $Code) { throw "Split-CodeBehind: -Code is required." }
 
     foreach ($marker in @('CodeBehindForm', 'CodeBehindReport')) {
         $idx = $Code.IndexOf($marker)
@@ -191,12 +196,16 @@ function Set-FieldProperty {
         Set a field-level DAO property, creating it if it doesn't exist.
     #>
     param(
-        [Parameter(Mandatory)]$Db,
-        [Parameter(Mandatory)][string]$TableName,
-        [Parameter(Mandatory)][string]$FieldName,
-        [Parameter(Mandatory)][string]$PropertyName,
+        $Db,
+        [string]$TableName,
+        [string]$FieldName,
+        [string]$PropertyName,
         $Value
     )
+    if (-not $Db) { throw "Set-FieldProperty: -Db is required." }
+    if (-not $TableName) { throw "Set-FieldProperty: -TableName is required." }
+    if (-not $FieldName) { throw "Set-FieldProperty: -FieldName is required." }
+    if (-not $PropertyName) { throw "Set-FieldProperty: -PropertyName is required." }
 
     $fld = $Db.TableDefs($TableName).Fields($FieldName)
     try {
@@ -214,11 +223,14 @@ function Invoke-VbaAfterImport {
         Opens in design, enables HasModule, then injects via VBE CodeModule.
     #>
     param(
-        [Parameter(Mandatory)]$App,
-        [Parameter(Mandatory)][string]$ObjectType,
-        [Parameter(Mandatory)][string]$Name,
-        [Parameter(Mandatory)][string]$VbaCode
+        $App,
+        [string]$ObjectType,
+        [string]$Name,
+        [string]$VbaCode
     )
+    if (-not $App) { throw "Invoke-VbaAfterImport: -App is required." }
+    if (-not $ObjectType) { throw "Invoke-VbaAfterImport: -ObjectType is required." }
+    if (-not $Name) { throw "Invoke-VbaAfterImport: -Name is required." }
 
     if (-not $VbaCode.Trim()) { return }
 

@@ -92,7 +92,6 @@ function Get-AccessScreenshot {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)]
         [string]$DbPath,
 
         [ValidateSet('form','report')]
@@ -108,6 +107,7 @@ function Get-AccessScreenshot {
 
         [switch]$AsJson
     )
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Get-AccessScreenshot'
 
     $app = Connect-AccessDB -DbPath $DbPath
 
@@ -238,16 +238,12 @@ function Send-AccessClick {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)]
         [string]$DbPath,
 
-        [Parameter(Mandatory)]
         [int]$X,
 
-        [Parameter(Mandatory)]
         [int]$Y,
 
-        [Parameter(Mandatory)]
         [int]$ImageWidth,
 
         [ValidateSet('left','double','right')]
@@ -257,6 +253,10 @@ function Send-AccessClick {
 
         [switch]$AsJson
     )
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Send-AccessClick'
+    if (-not $PSBoundParameters.ContainsKey('X')) { throw "Send-AccessClick: -X is required." }
+    if (-not $PSBoundParameters.ContainsKey('Y')) { throw "Send-AccessClick: -Y is required." }
+    if (-not $PSBoundParameters.ContainsKey('ImageWidth')) { throw "Send-AccessClick: -ImageWidth is required." }
 
     # mouse_event flag constants
     $LEFTDOWN  = [uint32]0x0002
@@ -350,7 +350,6 @@ function Send-AccessKeyboard {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)]
         [string]$DbPath,
 
         [string]$Text,
@@ -363,6 +362,7 @@ function Send-AccessKeyboard {
 
         [switch]$AsJson
     )
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Send-AccessKeyboard'
 
     # Virtual-key code map for special keys
     $VK_MAP = @{

@@ -7,10 +7,11 @@ function Get-AccessTempVar {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
+        [string]$DbPath,
         [string]$Name,
         [switch]$AsJson
     )
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Get-AccessTempVar'
     $app = Connect-AccessDB -DbPath $DbPath
 
     if ($Name) {
@@ -40,11 +41,14 @@ function Set-AccessTempVar {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][string]$Name,
-        [Parameter(Mandatory)][object]$Value,
+        [string]$DbPath,
+        [string]$Name,
+        [object]$Value,
         [switch]$AsJson
     )
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Set-AccessTempVar'
+    if (-not $Name) { throw "Set-AccessTempVar: -Name is required." }
+    if (-not $PSBoundParameters.ContainsKey('Value')) { throw "Set-AccessTempVar: -Value is required." }
     $app = Connect-AccessDB -DbPath $DbPath
 
     $app.TempVars.Add($Name, $Value)
@@ -60,10 +64,11 @@ function Remove-AccessTempVar {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
+        [string]$DbPath,
         [string]$Name,
         [switch]$AsJson
     )
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Remove-AccessTempVar'
     $app = Connect-AccessDB -DbPath $DbPath
 
     if ($Name) {

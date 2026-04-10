@@ -17,15 +17,12 @@ Describe 'Export-AccessFilteredReport' {
     It 'Has CmdletBinding' {
         (Get-Command Export-AccessFilteredReport).CmdletBinding | Should -BeTrue
     }
-    It 'Has DbPath parameter (mandatory)' {
-        $p = (Get-Command Export-AccessFilteredReport).Parameters['DbPath']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Has DbPath parameter (optional, session fallback)' {
+        $cmd = Get-Command Export-AccessFilteredReport
+        $cmd.Parameters['DbPath'] | Should -Not -BeNullOrEmpty
     }
-    It 'Has ReportName parameter (mandatory)' {
-        $p = (Get-Command Export-AccessFilteredReport).Parameters['ReportName']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Throws when -ReportName is omitted' {
+        { Export-AccessFilteredReport -DbPath 'x:\fake.accdb' } | Should -Throw '*-ReportName is required*'
     }
     It 'Has WhereCondition parameter (optional)' {
         (Get-Command Export-AccessFilteredReport).Parameters['WhereCondition'] | Should -Not -BeNullOrEmpty
@@ -56,15 +53,12 @@ Describe 'Send-AccessReportToPrinter' {
     It 'Has CmdletBinding' {
         (Get-Command Send-AccessReportToPrinter).CmdletBinding | Should -BeTrue
     }
-    It 'Has DbPath parameter (mandatory)' {
-        $p = (Get-Command Send-AccessReportToPrinter).Parameters['DbPath']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Has DbPath parameter (optional, session fallback)' {
+        $cmd = Get-Command Send-AccessReportToPrinter
+        $cmd.Parameters['DbPath'] | Should -Not -BeNullOrEmpty
     }
-    It 'Has ReportName parameter (mandatory)' {
-        $p = (Get-Command Send-AccessReportToPrinter).Parameters['ReportName']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Throws when -ReportName is omitted' {
+        { Send-AccessReportToPrinter -DbPath 'x:\fake.accdb' } | Should -Throw '*-ReportName is required*'
     }
     It 'Has WhereCondition parameter (optional)' {
         (Get-Command Send-AccessReportToPrinter).Parameters['WhereCondition'] | Should -Not -BeNullOrEmpty

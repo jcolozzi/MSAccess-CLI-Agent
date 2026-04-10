@@ -41,6 +41,8 @@
         'Set-AccessVbeProc'
         'Update-AccessVbeProc'
         'Add-AccessVbeCode'
+        'Import-AccessVbaFile'
+        'Test-AccessVbaFileEncoding'
 
         # Search
         'Find-AccessVbeText'

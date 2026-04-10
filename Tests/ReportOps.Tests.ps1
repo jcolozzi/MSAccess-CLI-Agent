@@ -15,15 +15,12 @@ Describe 'New-AccessReport' {
     It 'Has CmdletBinding' {
         (Get-Command New-AccessReport).CmdletBinding | Should -BeTrue
     }
-    It 'Has DbPath parameter (mandatory)' {
-        $p = (Get-Command New-AccessReport).Parameters['DbPath']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Has DbPath parameter (optional, session fallback)' {
+        $cmd = Get-Command New-AccessReport
+        $cmd.Parameters['DbPath'] | Should -Not -BeNullOrEmpty
     }
-    It 'Has ReportName parameter (mandatory)' {
-        $p = (Get-Command New-AccessReport).Parameters['ReportName']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Throws when -ReportName is omitted' {
+        { New-AccessReport -DbPath 'x:\fake.accdb' } | Should -Throw '*-ReportName is required*'
     }
     It 'Has RecordSource parameter (optional)' {
         (Get-Command New-AccessReport).Parameters['RecordSource'] | Should -Not -BeNullOrEmpty
@@ -37,15 +34,12 @@ Describe 'Get-AccessGroupLevel' {
     It 'Has CmdletBinding' {
         (Get-Command Get-AccessGroupLevel).CmdletBinding | Should -BeTrue
     }
-    It 'Has DbPath parameter (mandatory)' {
-        $p = (Get-Command Get-AccessGroupLevel).Parameters['DbPath']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Has DbPath parameter (optional, session fallback)' {
+        $cmd = Get-Command Get-AccessGroupLevel
+        $cmd.Parameters['DbPath'] | Should -Not -BeNullOrEmpty
     }
-    It 'Has ReportName parameter (mandatory)' {
-        $p = (Get-Command Get-AccessGroupLevel).Parameters['ReportName']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Throws when -ReportName is omitted' {
+        { Get-AccessGroupLevel -DbPath 'x:\fake.accdb' } | Should -Throw '*-ReportName is required*'
     }
     It 'Has AsJson switch' {
         (Get-Command Get-AccessGroupLevel).Parameters['AsJson'].SwitchParameter | Should -BeTrue
@@ -56,20 +50,15 @@ Describe 'Set-AccessGroupLevel' {
     It 'Has CmdletBinding' {
         (Get-Command Set-AccessGroupLevel).CmdletBinding | Should -BeTrue
     }
-    It 'Has DbPath parameter (mandatory)' {
-        $p = (Get-Command Set-AccessGroupLevel).Parameters['DbPath']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Has DbPath parameter (optional, session fallback)' {
+        $cmd = Get-Command Set-AccessGroupLevel
+        $cmd.Parameters['DbPath'] | Should -Not -BeNullOrEmpty
     }
-    It 'Has ReportName parameter (mandatory)' {
-        $p = (Get-Command Set-AccessGroupLevel).Parameters['ReportName']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Throws when -ReportName is omitted' {
+        { Set-AccessGroupLevel -DbPath 'x:\fake.accdb' } | Should -Throw '*-ReportName is required*'
     }
-    It 'Has Expression parameter (mandatory)' {
-        $p = (Get-Command Set-AccessGroupLevel).Parameters['Expression']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Throws when -Expression is omitted' {
+        { Set-AccessGroupLevel -DbPath 'x:\fake.accdb' -ReportName 'R' } | Should -Throw '*-Expression is required*'
     }
     It 'Has SortOrder with ValidateSet' {
         $p = (Get-Command Set-AccessGroupLevel).Parameters['SortOrder']
@@ -94,20 +83,15 @@ Describe 'Remove-AccessGroupLevel' {
     It 'Has CmdletBinding' {
         (Get-Command Remove-AccessGroupLevel).CmdletBinding | Should -BeTrue
     }
-    It 'Has DbPath parameter (mandatory)' {
-        $p = (Get-Command Remove-AccessGroupLevel).Parameters['DbPath']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Has DbPath parameter (optional, session fallback)' {
+        $cmd = Get-Command Remove-AccessGroupLevel
+        $cmd.Parameters['DbPath'] | Should -Not -BeNullOrEmpty
     }
-    It 'Has ReportName parameter (mandatory)' {
-        $p = (Get-Command Remove-AccessGroupLevel).Parameters['ReportName']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Throws when -ReportName is omitted' {
+        { Remove-AccessGroupLevel -DbPath 'x:\fake.accdb' } | Should -Throw '*-ReportName is required*'
     }
-    It 'Has LevelIndex parameter (mandatory)' {
-        $p = (Get-Command Remove-AccessGroupLevel).Parameters['LevelIndex']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Throws when -LevelIndex is omitted' {
+        { Remove-AccessGroupLevel -DbPath 'x:\fake.accdb' -ReportName 'R' } | Should -Throw '*-LevelIndex is required*'
     }
     It 'Has AsJson switch' {
         (Get-Command Remove-AccessGroupLevel).Parameters['AsJson'].SwitchParameter | Should -BeTrue

@@ -99,10 +99,8 @@ Describe 'Invoke-AccessSQL' {
     It 'Has CmdletBinding' {
         (Get-Command Invoke-AccessSQL).CmdletBinding | Should -BeTrue
     }
-    It 'Has mandatory SQL parameter' {
-        $p = (Get-Command Invoke-AccessSQL).Parameters['SQL']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -Contain $true
+    It 'Throws when -SQL is omitted' {
+        { Invoke-AccessSQL -DbPath 'x:\fake.accdb' } | Should -Throw '*-SQL is required*'
     }
 }
 
@@ -110,9 +108,7 @@ Describe 'Invoke-AccessSQLBatch' {
     It 'Has CmdletBinding' {
         (Get-Command Invoke-AccessSQLBatch).CmdletBinding | Should -BeTrue
     }
-    It 'Has mandatory Statements parameter' {
-        $p = (Get-Command Invoke-AccessSQLBatch).Parameters['Statements']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -Contain $true
+    It 'Throws when -Statements is omitted' {
+        { Invoke-AccessSQLBatch -DbPath 'x:\fake.accdb' } | Should -Throw '*-Statements is required*'
     }
 }

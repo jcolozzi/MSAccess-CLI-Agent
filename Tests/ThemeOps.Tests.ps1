@@ -17,15 +17,12 @@ Describe 'Get-AccessTheme' {
     It 'Has CmdletBinding' {
         (Get-Command Get-AccessTheme).CmdletBinding | Should -BeTrue
     }
-    It 'Has DbPath parameter (mandatory)' {
-        $p = (Get-Command Get-AccessTheme).Parameters['DbPath']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Has DbPath parameter (optional, session fallback)' {
+        $cmd = Get-Command Get-AccessTheme
+        $cmd.Parameters['DbPath'] | Should -Not -BeNullOrEmpty
     }
-    It 'Has ObjectName parameter (mandatory)' {
-        $p = (Get-Command Get-AccessTheme).Parameters['ObjectName']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Throws when -ObjectName is omitted' {
+        { Get-AccessTheme -DbPath 'x:\fake.accdb' } | Should -Throw '*-ObjectName is required*'
     }
     It 'Has ObjectType with ValidateSet' {
         $p = (Get-Command Get-AccessTheme).Parameters['ObjectType']
@@ -44,20 +41,15 @@ Describe 'Set-AccessTheme' {
     It 'Has CmdletBinding' {
         (Get-Command Set-AccessTheme).CmdletBinding | Should -BeTrue
     }
-    It 'Has DbPath parameter (mandatory)' {
-        $p = (Get-Command Set-AccessTheme).Parameters['DbPath']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Has DbPath parameter (optional, session fallback)' {
+        $cmd = Get-Command Set-AccessTheme
+        $cmd.Parameters['DbPath'] | Should -Not -BeNullOrEmpty
     }
-    It 'Has ObjectName parameter (mandatory)' {
-        $p = (Get-Command Set-AccessTheme).Parameters['ObjectName']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Throws when -ObjectName is omitted' {
+        { Set-AccessTheme -DbPath 'x:\fake.accdb' -ThemeName 'T' } | Should -Throw '*-ObjectName is required*'
     }
-    It 'Has ThemeName parameter (mandatory)' {
-        $p = (Get-Command Set-AccessTheme).Parameters['ThemeName']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Throws when -ThemeName is omitted' {
+        { Set-AccessTheme -DbPath 'x:\fake.accdb' -ObjectName 'F' } | Should -Throw '*-ThemeName is required*'
     }
     It 'Has ObjectType with ValidateSet' {
         $p = (Get-Command Set-AccessTheme).Parameters['ObjectType']
@@ -74,10 +66,9 @@ Describe 'Get-AccessThemeList' {
     It 'Has CmdletBinding' {
         (Get-Command Get-AccessThemeList).CmdletBinding | Should -BeTrue
     }
-    It 'Has DbPath parameter (mandatory)' {
-        $p = (Get-Command Get-AccessThemeList).Parameters['DbPath']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Has DbPath parameter (optional, session fallback)' {
+        $cmd = Get-Command Get-AccessThemeList
+        $cmd.Parameters['DbPath'] | Should -Not -BeNullOrEmpty
     }
     It 'Has AsJson switch' {
         (Get-Command Get-AccessThemeList).Parameters['AsJson'].SwitchParameter | Should -BeTrue

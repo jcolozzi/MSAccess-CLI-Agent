@@ -11,8 +11,8 @@ function Export-AccessFilteredReport {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][string]$ReportName,
+        [string]$DbPath,
+        [string]$ReportName,
         [string]$WhereCondition,
         [string]$FilterName,
         [ValidateSet('pdf','xlsx','rtf','txt')]
@@ -21,6 +21,8 @@ function Export-AccessFilteredReport {
         [switch]$OpenAfterExport,
         [switch]$AsJson
     )
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Export-AccessFilteredReport'
+    if (-not $ReportName) { throw "Export-AccessFilteredReport: -ReportName is required." }
 
     $app = Connect-AccessDB -DbPath $DbPath
 
@@ -84,8 +86,8 @@ function Send-AccessReportToPrinter {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][string]$ReportName,
+        [string]$DbPath,
+        [string]$ReportName,
         [string]$WhereCondition,
         [int]$Copies = 1,
         [ValidateSet('all','pages','selection')]
@@ -94,6 +96,8 @@ function Send-AccessReportToPrinter {
         [int]$ToPage,
         [switch]$AsJson
     )
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Send-AccessReportToPrinter'
+    if (-not $ReportName) { throw "Send-AccessReportToPrinter: -ReportName is required." }
 
     $app = Connect-AccessDB -DbPath $DbPath
 

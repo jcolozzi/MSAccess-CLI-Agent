@@ -7,10 +7,11 @@ function Get-AccessLinkedTable {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
+        [string]$DbPath,
         [switch]$AsJson
     )
 
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Get-AccessLinkedTable'
     $app = Connect-AccessDB -DbPath $DbPath
     $db  = $app.CurrentDb()
 
@@ -45,13 +46,16 @@ function Set-AccessLinkedTable {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][string]$TableName,
-        [Parameter(Mandatory)][string]$NewConnect,
+        [string]$DbPath,
+        [string]$TableName,
+        [string]$NewConnect,
         [switch]$RelinkAll,
         [switch]$AsJson
     )
 
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Set-AccessLinkedTable'
+    if (-not $TableName) { throw "Set-AccessLinkedTable: -TableName is required." }
+    if (-not $NewConnect) { throw "Set-AccessLinkedTable: -NewConnect is required." }
     $app = Connect-AccessDB -DbPath $DbPath
     $db  = $app.CurrentDb()
 
@@ -105,10 +109,11 @@ function Get-AccessRelationship {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
+        [string]$DbPath,
         [switch]$AsJson
     )
 
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Get-AccessRelationship'
     $app = Connect-AccessDB -DbPath $DbPath
     $db  = $app.CurrentDb()
     $rels = [System.Collections.Generic.List[object]]::new()
@@ -153,15 +158,20 @@ function New-AccessRelationship {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][string]$Name,
-        [Parameter(Mandatory)][string]$Table,
-        [Parameter(Mandatory)][string]$ForeignTable,
-        [Parameter(Mandatory)][array]$Fields,
+        [string]$DbPath,
+        [string]$Name,
+        [string]$Table,
+        [string]$ForeignTable,
+        [array]$Fields,
         [int]$Attributes = 0,
         [switch]$AsJson
     )
 
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'New-AccessRelationship'
+    if (-not $Name) { throw "New-AccessRelationship: -Name is required." }
+    if (-not $Table) { throw "New-AccessRelationship: -Table is required." }
+    if (-not $ForeignTable) { throw "New-AccessRelationship: -ForeignTable is required." }
+    if (-not $Fields -or $Fields.Count -eq 0) { throw "New-AccessRelationship: -Fields is required." }
     $app = Connect-AccessDB -DbPath $DbPath
     $db  = $app.CurrentDb()
 
@@ -201,11 +211,13 @@ function Remove-AccessRelationship {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][string]$Name,
+        [string]$DbPath,
+        [string]$Name,
         [switch]$AsJson
     )
 
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Remove-AccessRelationship'
+    if (-not $Name) { throw "Remove-AccessRelationship: -Name is required." }
     $app = Connect-AccessDB -DbPath $DbPath
     $db  = $app.CurrentDb()
     $db.Relations.Delete($Name)
@@ -223,10 +235,11 @@ function Get-AccessReference {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
+        [string]$DbPath,
         [switch]$AsJson
     )
 
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Get-AccessReference'
     $app     = Connect-AccessDB -DbPath $DbPath
     $refsCol = $app.VBE.ActiveVBProject.References
     $refs    = [System.Collections.Generic.List[object]]::new()
@@ -268,8 +281,8 @@ function Set-AccessReference {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][ValidateSet('add','remove')][string]$Action,
+        [string]$DbPath,
+        [ValidateSet('add','remove')][string]$Action,
         [string]$Name,
         [string]$RefPath,
         [string]$Guid,
@@ -278,6 +291,8 @@ function Set-AccessReference {
         [switch]$AsJson
     )
 
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Set-AccessReference'
+    if (-not $Action) { throw "Set-AccessReference: -Action is required (add, remove)." }
     $app  = Connect-AccessDB -DbPath $DbPath
     $refs = $app.VBE.ActiveVBProject.References
 
@@ -323,15 +338,18 @@ function Set-AccessQuery {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][ValidateSet('create','modify','delete','rename','get_sql')][string]$Action,
-        [Parameter(Mandatory)][string]$QueryName,
+        [string]$DbPath,
+        [ValidateSet('create','modify','delete','rename','get_sql')][string]$Action,
+        [string]$QueryName,
         [string]$Sql,
         [string]$NewName,
         [switch]$ConfirmDelete,
         [switch]$AsJson
     )
 
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Set-AccessQuery'
+    if (-not $Action) { throw "Set-AccessQuery: -Action is required (create, modify, delete, rename, get_sql)." }
+    if (-not $QueryName) { throw "Set-AccessQuery: -QueryName is required." }
     $app = Connect-AccessDB -DbPath $DbPath
     $db  = $app.CurrentDb()
 
@@ -380,10 +398,11 @@ function Get-AccessStartupOption {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
+        [string]$DbPath,
         [switch]$AsJson
     )
 
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Get-AccessStartupOption'
     $app = Connect-AccessDB -DbPath $DbPath
     $db  = $app.CurrentDb()
 
@@ -423,11 +442,13 @@ function Get-AccessDatabaseProperty {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][string]$Name,
+        [string]$DbPath,
+        [string]$Name,
         [switch]$AsJson
     )
 
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Get-AccessDatabaseProperty'
+    if (-not $Name) { throw "Get-AccessDatabaseProperty: -Name is required." }
     $app = Connect-AccessDB -DbPath $DbPath
     $db  = $app.CurrentDb()
 
@@ -453,13 +474,16 @@ function Set-AccessDatabaseProperty {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][string]$Name,
-        [Parameter(Mandatory)]$Value,
+        [string]$DbPath,
+        [string]$Name,
+        $Value,
         [int]$PropType = -1,
         [switch]$AsJson
     )
 
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Set-AccessDatabaseProperty'
+    if (-not $Name) { throw "Set-AccessDatabaseProperty: -Name is required." }
+    if (-not $PSBoundParameters.ContainsKey('Value')) { throw "Set-AccessDatabaseProperty: -Value is required." }
     $app     = Connect-AccessDB -DbPath $DbPath
     $db      = $app.CurrentDb()
     $coerced = ConvertTo-CoercedProp -Value $Value

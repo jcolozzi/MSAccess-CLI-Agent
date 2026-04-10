@@ -10,10 +10,12 @@ function Get-AccessSubDataSheet {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][string]$TableName,
+        [string]$DbPath,
+        [string]$TableName,
         [switch]$AsJson
     )
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Get-AccessSubDataSheet'
+    if (-not $TableName) { throw "Get-AccessSubDataSheet: -TableName is required." }
 
     $app = Connect-AccessDB -DbPath $DbPath
     $db = $app.CurrentDb()
@@ -60,14 +62,16 @@ function Set-AccessSubDataSheet {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][string]$TableName,
+        [string]$DbPath,
+        [string]$TableName,
         [string]$SubDataSheetName,
         [string]$LinkChildFields,
         [string]$LinkMasterFields,
         [int]$Height,
         [switch]$AsJson
     )
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Set-AccessSubDataSheet'
+    if (-not $TableName) { throw "Set-AccessSubDataSheet: -TableName is required." }
 
     $app = Connect-AccessDB -DbPath $DbPath
     $db = $app.CurrentDb()

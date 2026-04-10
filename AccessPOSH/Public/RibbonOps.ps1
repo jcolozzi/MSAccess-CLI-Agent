@@ -10,10 +10,11 @@ function Get-AccessRibbon {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
+        [string]$DbPath,
         [string]$RibbonName,
         [switch]$AsJson
     )
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Get-AccessRibbon'
     $app = Connect-AccessDB -DbPath $DbPath
     $db = $app.CurrentDb()
 
@@ -25,7 +26,7 @@ function Get-AccessRibbon {
 
     if (-not $tableExists) {
         if ($RibbonName) {
-            throw "USysRibbons table does not exist — no custom ribbons defined"
+            throw "USysRibbons table does not exist - no custom ribbons defined"
         }
         $result = [ordered]@{
             database = (Split-Path $DbPath -Leaf)
@@ -80,12 +81,15 @@ function Set-AccessRibbon {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][string]$RibbonName,
-        [Parameter(Mandatory)][string]$RibbonXml,
+        [string]$DbPath,
+        [string]$RibbonName,
+        [string]$RibbonXml,
         [switch]$SetAsDefault,
         [switch]$AsJson
     )
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Set-AccessRibbon'
+    if (-not $RibbonName) { throw "Set-AccessRibbon: -RibbonName is required." }
+    if (-not $RibbonXml) { throw "Set-AccessRibbon: -RibbonXml is required." }
     $app = Connect-AccessDB -DbPath $DbPath
     $db = $app.CurrentDb()
 
@@ -144,10 +148,12 @@ function Remove-AccessRibbon {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][string]$RibbonName,
+        [string]$DbPath,
+        [string]$RibbonName,
         [switch]$AsJson
     )
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Remove-AccessRibbon'
+    if (-not $RibbonName) { throw "Remove-AccessRibbon: -RibbonName is required." }
     $app = Connect-AccessDB -DbPath $DbPath
     $db = $app.CurrentDb()
 

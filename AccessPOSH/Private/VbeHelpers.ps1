@@ -6,8 +6,8 @@ function Test-TextMatch {
         Internal: match needle against haystack (plain substring or regex).
     #>
     param(
-        [Parameter(Mandatory)][string]$Needle,
-        [Parameter(Mandatory)][string]$Haystack,
+        [string]$Needle,
+        [string]$Haystack,
         [bool]$MatchCase = $false,
         [bool]$UseRegex = $false
     )
@@ -29,9 +29,9 @@ function Get-CodeModule {
         Internal: Get cached VBE CodeModule COM object for a module/form/report.
     #>
     param(
-        [Parameter(Mandatory)]$App,
-        [Parameter(Mandatory)][string]$ObjectType,
-        [Parameter(Mandatory)][string]$ObjectName
+        $App,
+        [string]$ObjectType,
+        [string]$ObjectName
     )
 
     if (-not $script:VBE_PREFIX.ContainsKey($ObjectType)) {
@@ -61,8 +61,8 @@ function Get-AllModuleCode {
         Internal: Get full module text using VbeCodeCache.
     #>
     param(
-        [Parameter(Mandatory)]$CodeModule,
-        [Parameter(Mandatory)][string]$CacheKey
+        $CodeModule,
+        [string]$CacheKey
     )
 
     if (-not $script:AccessSession.VbeCodeCache.ContainsKey($CacheKey)) {

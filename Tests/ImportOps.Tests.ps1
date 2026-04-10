@@ -15,20 +15,15 @@ Describe 'Import-AccessFromExcel' {
     It 'Has CmdletBinding' {
         (Get-Command Import-AccessFromExcel).CmdletBinding | Should -BeTrue
     }
-    It 'Has DbPath parameter (mandatory)' {
-        $p = (Get-Command Import-AccessFromExcel).Parameters['DbPath']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Has DbPath parameter (optional, session fallback)' {
+        $cmd = Get-Command Import-AccessFromExcel
+        $cmd.Parameters['DbPath'] | Should -Not -BeNullOrEmpty
     }
-    It 'Has ExcelPath parameter (mandatory)' {
-        $p = (Get-Command Import-AccessFromExcel).Parameters['ExcelPath']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Throws when -ExcelPath is omitted' {
+        { Import-AccessFromExcel -DbPath 'x:\fake.accdb' -TableName 'T' } | Should -Throw '*-ExcelPath is required*'
     }
-    It 'Has TableName parameter (mandatory)' {
-        $p = (Get-Command Import-AccessFromExcel).Parameters['TableName']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Throws when -TableName is omitted' {
+        { Import-AccessFromExcel -DbPath 'x:\fake.accdb' -ExcelPath 'x:\fake.xlsx' } | Should -Throw '*-TableName is required*'
     }
     It 'Has SpreadsheetType with ValidateSet' {
         $p = (Get-Command Import-AccessFromExcel).Parameters['SpreadsheetType']
@@ -52,20 +47,15 @@ Describe 'Import-AccessFromCSV' {
     It 'Has CmdletBinding' {
         (Get-Command Import-AccessFromCSV).CmdletBinding | Should -BeTrue
     }
-    It 'Has DbPath parameter (mandatory)' {
-        $p = (Get-Command Import-AccessFromCSV).Parameters['DbPath']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Has DbPath parameter (optional, session fallback)' {
+        $cmd = Get-Command Import-AccessFromCSV
+        $cmd.Parameters['DbPath'] | Should -Not -BeNullOrEmpty
     }
-    It 'Has FilePath parameter (mandatory)' {
-        $p = (Get-Command Import-AccessFromCSV).Parameters['FilePath']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Throws when -FilePath is omitted' {
+        { Import-AccessFromCSV -DbPath 'x:\fake.accdb' -TableName 'T' } | Should -Throw '*-FilePath is required*'
     }
-    It 'Has TableName parameter (mandatory)' {
-        $p = (Get-Command Import-AccessFromCSV).Parameters['TableName']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Throws when -TableName is omitted' {
+        { Import-AccessFromCSV -DbPath 'x:\fake.accdb' -FilePath 'x:\fake.csv' } | Should -Throw '*-TableName is required*'
     }
     It 'Has SpecificationName parameter (optional)' {
         (Get-Command Import-AccessFromCSV).Parameters['SpecificationName'] | Should -Not -BeNullOrEmpty
@@ -79,15 +69,12 @@ Describe 'Import-AccessFromXML' {
     It 'Has CmdletBinding' {
         (Get-Command Import-AccessFromXML).CmdletBinding | Should -BeTrue
     }
-    It 'Has DbPath parameter (mandatory)' {
-        $p = (Get-Command Import-AccessFromXML).Parameters['DbPath']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Has DbPath parameter (optional, session fallback)' {
+        $cmd = Get-Command Import-AccessFromXML
+        $cmd.Parameters['DbPath'] | Should -Not -BeNullOrEmpty
     }
-    It 'Has XmlPath parameter (mandatory)' {
-        $p = (Get-Command Import-AccessFromXML).Parameters['XmlPath']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Throws when -XmlPath is omitted' {
+        { Import-AccessFromXML -DbPath 'x:\fake.accdb' } | Should -Throw '*-XmlPath is required*'
     }
     It 'Has ImportOptions with ValidateSet' {
         $p = (Get-Command Import-AccessFromXML).Parameters['ImportOptions']
@@ -105,20 +92,15 @@ Describe 'Import-AccessFromDatabase' {
     It 'Has CmdletBinding' {
         (Get-Command Import-AccessFromDatabase).CmdletBinding | Should -BeTrue
     }
-    It 'Has DbPath parameter (mandatory)' {
-        $p = (Get-Command Import-AccessFromDatabase).Parameters['DbPath']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Has DbPath parameter (optional, session fallback)' {
+        $cmd = Get-Command Import-AccessFromDatabase
+        $cmd.Parameters['DbPath'] | Should -Not -BeNullOrEmpty
     }
-    It 'Has SourceDbPath parameter (mandatory)' {
-        $p = (Get-Command Import-AccessFromDatabase).Parameters['SourceDbPath']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Throws when -SourceDbPath is omitted' {
+        { Import-AccessFromDatabase -DbPath 'x:\fake.accdb' -SourceObject 'T' } | Should -Throw '*-SourceDbPath is required*'
     }
-    It 'Has SourceObject parameter (mandatory)' {
-        $p = (Get-Command Import-AccessFromDatabase).Parameters['SourceObject']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Throws when -SourceObject is omitted' {
+        { Import-AccessFromDatabase -DbPath 'x:\fake.accdb' -SourceDbPath 'x:\source.accdb' } | Should -Throw '*-SourceObject is required*'
     }
     It 'Has ObjectType with ValidateSet' {
         $p = (Get-Command Import-AccessFromDatabase).Parameters['ObjectType']
@@ -137,20 +119,15 @@ Describe 'Export-AccessToExcel' {
     It 'Has CmdletBinding' {
         (Get-Command Export-AccessToExcel).CmdletBinding | Should -BeTrue
     }
-    It 'Has DbPath parameter (mandatory)' {
-        $p = (Get-Command Export-AccessToExcel).Parameters['DbPath']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Has DbPath parameter (optional, session fallback)' {
+        $cmd = Get-Command Export-AccessToExcel
+        $cmd.Parameters['DbPath'] | Should -Not -BeNullOrEmpty
     }
-    It 'Has ObjectName parameter (mandatory)' {
-        $p = (Get-Command Export-AccessToExcel).Parameters['ObjectName']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Throws when -ObjectName is omitted' {
+        { Export-AccessToExcel -DbPath 'x:\fake.accdb' -ExcelPath 'x:\out.xlsx' } | Should -Throw '*-ObjectName is required*'
     }
-    It 'Has ExcelPath parameter (mandatory)' {
-        $p = (Get-Command Export-AccessToExcel).Parameters['ExcelPath']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Throws when -ExcelPath is omitted' {
+        { Export-AccessToExcel -DbPath 'x:\fake.accdb' -ObjectName 'T' } | Should -Throw '*-ExcelPath is required*'
     }
     It 'Has SpreadsheetType with ValidateSet' {
         $p = (Get-Command Export-AccessToExcel).Parameters['SpreadsheetType']

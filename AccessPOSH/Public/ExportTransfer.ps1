@@ -7,8 +7,8 @@ function Export-AccessReport {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][string]$ObjectName,
+        [string]$DbPath,
+        [string]$ObjectName,
         [ValidateSet('report','table','query','form')]
         [string]$ObjectType = 'report',
         [ValidateSet('pdf','xlsx','rtf','txt')]
@@ -17,6 +17,9 @@ function Export-AccessReport {
         [switch]$OpenAfterExport,
         [switch]$AsJson
     )
+
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Export-AccessReport'
+    if (-not $ObjectName) { throw "Export-AccessReport: -ObjectName is required." }
 
     $app = Connect-AccessDB -DbPath $DbPath
 
@@ -63,10 +66,10 @@ function Copy-AccessData {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][ValidateSet('import','export')][string]$Action,
-        [Parameter(Mandatory)][string]$FilePath,
-        [Parameter(Mandatory)][string]$TableName,
+        [string]$DbPath,
+        [ValidateSet('import','export')][string]$Action,
+        [string]$FilePath,
+        [string]$TableName,
         [bool]$HasHeaders = $true,
         [ValidateSet('xlsx','xls','excel','csv','txt','text')]
         [string]$FileType = 'xlsx',
@@ -74,6 +77,11 @@ function Copy-AccessData {
         [string]$SpecName,
         [switch]$AsJson
     )
+
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Copy-AccessData'
+    if (-not $Action) { throw "Copy-AccessData: -Action is required (import, export)." }
+    if (-not $FilePath) { throw "Copy-AccessData: -FilePath is required." }
+    if (-not $TableName) { throw "Copy-AccessData: -TableName is required." }
 
     $app = Connect-AccessDB -DbPath $DbPath
     $FilePath = [System.IO.Path]::GetFullPath($FilePath)

@@ -15,10 +15,12 @@ function Get-AccessTableInfo {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][string]$TableName,
+        [string]$DbPath,
+        [string]$TableName,
         [switch]$AsJson
     )
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Get-AccessTableInfo'
+    if (-not $TableName) { throw "Get-AccessTableInfo: -TableName is required." }
 
     $app = Connect-AccessDB -DbPath $DbPath
     $db  = $app.CurrentDb()
@@ -93,11 +95,14 @@ function New-AccessTable {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][string]$TableName,
-        [Parameter(Mandatory)][object[]]$Fields,
+        [string]$DbPath,
+        [string]$TableName,
+        [object[]]$Fields,
         [switch]$AsJson
     )
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'New-AccessTable'
+    if (-not $TableName) { throw "New-AccessTable: -TableName is required." }
+    if (-not $Fields -or $Fields.Count -eq 0) { throw "New-AccessTable: -Fields is required." }
 
     $app = Connect-AccessDB -DbPath $DbPath
     $db  = $app.CurrentDb()
@@ -202,10 +207,10 @@ function Edit-AccessTable {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][string]$TableName,
-        [Parameter(Mandatory)][ValidateSet('add_field','delete_field','rename_field')][string]$Action,
-        [Parameter(Mandatory)][string]$FieldName,
+        [string]$DbPath,
+        [string]$TableName,
+        [ValidateSet('add_field','delete_field','rename_field')][string]$Action,
+        [string]$FieldName,
         [string]$NewName,
         [string]$FieldType = 'text',
         [int]$Size = 0,
@@ -215,6 +220,10 @@ function Edit-AccessTable {
         [switch]$ConfirmDelete,
         [switch]$AsJson
     )
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Edit-AccessTable'
+    if (-not $TableName) { throw "Edit-AccessTable: -TableName is required." }
+    if (-not $Action) { throw "Edit-AccessTable: -Action is required (add_field, delete_field, rename_field)." }
+    if (-not $FieldName) { throw "Edit-AccessTable: -FieldName is required." }
 
     $app = Connect-AccessDB -DbPath $DbPath
     $db  = $app.CurrentDb()
@@ -283,11 +292,14 @@ function Get-AccessFieldProperty {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][string]$TableName,
-        [Parameter(Mandatory)][string]$FieldName,
+        [string]$DbPath,
+        [string]$TableName,
+        [string]$FieldName,
         [switch]$AsJson
     )
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Get-AccessFieldProperty'
+    if (-not $TableName) { throw "Get-AccessFieldProperty: -TableName is required." }
+    if (-not $FieldName) { throw "Get-AccessFieldProperty: -FieldName is required." }
 
     $app = Connect-AccessDB -DbPath $DbPath
     $db  = $app.CurrentDb()
@@ -322,13 +334,18 @@ function Set-AccessFieldProperty {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][string]$TableName,
-        [Parameter(Mandatory)][string]$FieldName,
-        [Parameter(Mandatory)][string]$PropertyName,
-        [Parameter(Mandatory)]$Value,
+        [string]$DbPath,
+        [string]$TableName,
+        [string]$FieldName,
+        [string]$PropertyName,
+        $Value,
         [switch]$AsJson
     )
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Set-AccessFieldProperty'
+    if (-not $TableName) { throw "Set-AccessFieldProperty: -TableName is required." }
+    if (-not $FieldName) { throw "Set-AccessFieldProperty: -FieldName is required." }
+    if (-not $PropertyName) { throw "Set-AccessFieldProperty: -PropertyName is required." }
+    if (-not $Value) { throw "Set-AccessFieldProperty: -Value is required." }
 
     $app     = Connect-AccessDB -DbPath $DbPath
     $db      = $app.CurrentDb()
@@ -367,10 +384,12 @@ function Get-AccessIndex {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][string]$TableName,
+        [string]$DbPath,
+        [string]$TableName,
         [switch]$AsJson
     )
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Get-AccessIndex'
+    if (-not $TableName) { throw "Get-AccessIndex: -TableName is required." }
 
     $app = Connect-AccessDB -DbPath $DbPath
     $db  = $app.CurrentDb()
@@ -413,15 +432,19 @@ function Set-AccessIndex {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][string]$TableName,
-        [Parameter(Mandatory)][ValidateSet('create','delete')][string]$Action,
-        [Parameter(Mandatory)][string]$IndexName,
+        [string]$DbPath,
+        [string]$TableName,
+        [ValidateSet('create','delete')][string]$Action,
+        [string]$IndexName,
         [array]$Fields,
         [switch]$Primary,
         [switch]$Unique,
         [switch]$AsJson
     )
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Set-AccessIndex'
+    if (-not $TableName) { throw "Set-AccessIndex: -TableName is required." }
+    if (-not $Action) { throw "Set-AccessIndex: -Action is required (create, delete)." }
+    if (-not $IndexName) { throw "Set-AccessIndex: -IndexName is required." }
 
     $app = Connect-AccessDB -DbPath $DbPath
     $db  = $app.CurrentDb()

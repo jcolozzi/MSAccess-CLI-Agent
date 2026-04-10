@@ -43,7 +43,7 @@ function Format-AccessOutput {
         Handle -AsJson switch: convert hashtable/PSCustomObject to JSON or return as-is.
     #>
     param(
-        [Parameter(Mandatory)]$Data,
+        $Data,
         [switch]$AsJson
     )
 
@@ -63,9 +63,9 @@ function Read-TempFile {
         Returns [PSCustomObject]@{ Content = [string]; Encoding = [string] }
     #>
     param(
-        [Parameter(Mandatory)]
         [string]$Path
     )
+    if (-not $Path) { throw "Read-TempFile: -Path is required." }
 
     # Check BOM
     $bom = [byte[]]::new(2)
@@ -108,12 +108,12 @@ function Write-TempFile {
         Default utf-16 (Access .accdb expects UTF-16LE with BOM).
     #>
     param(
-        [Parameter(Mandatory)]
         [string]$Path,
-        [Parameter(Mandatory)]
         [string]$Content,
         [string]$Encoding = 'utf-16'
     )
+    if (-not $Path) { throw "Write-TempFile: -Path is required." }
+    if (-not $Content) { throw "Write-TempFile: -Content is required." }
 
     switch ($Encoding) {
         'utf-16' {
@@ -127,4 +127,52 @@ function Write-TempFile {
             [System.IO.File]::WriteAllText($Path, $Content, [System.Text.Encoding]::UTF8)
         }
     }
+}
+
+function Test-VbaFileEncoding {
+    <#
+    .SYNOPSIS
+        Check whether a .bas or .cls file is ANSI (Windows-1252, no BOM).
+        Returns a hashtable with IsAnsi, Encoding, and (if non-ANSI) a reason.
+    #>
+    param(
+        [string]$Path
+    )
+    if (-not $Path) { throw "Test-VbaFileEncoding: -Path is required." }
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        throw "Test-VbaFileEncoding: File not found: $Path"
+    }
+
+    $bytes = [System.IO.File]::ReadAllBytes($Path)
+
+    # UTF-8 BOM: EF BB BF
+    if ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) {
+        return @{ IsAnsi = $false; Encoding = 'utf-8-bom'; Reason = 'File has UTF-8 BOM (EF BB BF). VBComponents.Import requires ANSI.' }
+    }
+    # UTF-16 LE BOM: FF FE
+    if ($bytes.Length -ge 2 -and $bytes[0] -eq 0xFF -and $bytes[1] -eq 0xFE) {
+        return @{ IsAnsi = $false; Encoding = 'utf-16-le'; Reason = 'File has UTF-16 LE BOM. VBComponents.Import requires ANSI.' }
+    }
+    # UTF-16 BE BOM: FE FF
+    if ($bytes.Length -ge 2 -and $bytes[0] -eq 0xFE -and $bytes[1] -eq 0xFF) {
+        return @{ IsAnsi = $false; Encoding = 'utf-16-be'; Reason = 'File has UTF-16 BE BOM. VBComponents.Import requires ANSI.' }
+    }
+
+    return @{ IsAnsi = $true; Encoding = 'ansi'; Reason = $null }
+}
+
+function ConvertTo-AnsiTempFile {
+    <#
+    .SYNOPSIS
+        Read a VBA source file (any encoding) and write an ANSI (Windows-1252)
+        copy to a temp file. Returns the temp file path.
+    #>
+    param(
+        [string]$SourcePath
+    )
+    $content = [System.IO.File]::ReadAllText($SourcePath, [System.Text.Encoding]::UTF8)
+    $ext = [System.IO.Path]::GetExtension($SourcePath)
+    $tmpPath = [System.IO.Path]::Combine($env:TEMP, "AccessPOSH_import_$([guid]::NewGuid().ToString('N'))$ext")
+    [System.IO.File]::WriteAllText($tmpPath, $content, [System.Text.Encoding]::GetEncoding(1252))
+    return $tmpPath
 }

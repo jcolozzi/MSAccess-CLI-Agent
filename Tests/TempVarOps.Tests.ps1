@@ -15,10 +15,9 @@ Describe 'Get-AccessTempVar' {
     It 'Has CmdletBinding' {
         (Get-Command Get-AccessTempVar).CmdletBinding | Should -BeTrue
     }
-    It 'Has DbPath parameter (mandatory)' {
-        $p = (Get-Command Get-AccessTempVar).Parameters['DbPath']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Has DbPath parameter (optional, session fallback)' {
+        $cmd = Get-Command Get-AccessTempVar
+        $cmd.Parameters['DbPath'] | Should -Not -BeNullOrEmpty
     }
     It 'Has Name parameter (optional)' {
         (Get-Command Get-AccessTempVar).Parameters['Name'] | Should -Not -BeNullOrEmpty
@@ -34,20 +33,15 @@ Describe 'Set-AccessTempVar' {
     It 'Has CmdletBinding' {
         (Get-Command Set-AccessTempVar).CmdletBinding | Should -BeTrue
     }
-    It 'Has DbPath parameter (mandatory)' {
-        $p = (Get-Command Set-AccessTempVar).Parameters['DbPath']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Has DbPath parameter (optional, session fallback)' {
+        $cmd = Get-Command Set-AccessTempVar
+        $cmd.Parameters['DbPath'] | Should -Not -BeNullOrEmpty
     }
-    It 'Has Name parameter (mandatory)' {
-        $p = (Get-Command Set-AccessTempVar).Parameters['Name']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Throws when -Name is omitted' {
+        { Set-AccessTempVar -DbPath 'x:\fake.accdb' } | Should -Throw '*-Name is required*'
     }
-    It 'Has Value parameter (mandatory)' {
-        $p = (Get-Command Set-AccessTempVar).Parameters['Value']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Throws when -Value is omitted' {
+        { Set-AccessTempVar -DbPath 'x:\fake.accdb' -Name 'x' } | Should -Throw '*-Value is required*'
     }
     It 'Has AsJson switch' {
         $p = (Get-Command Set-AccessTempVar).Parameters['AsJson']
@@ -60,10 +54,9 @@ Describe 'Remove-AccessTempVar' {
     It 'Has CmdletBinding' {
         (Get-Command Remove-AccessTempVar).CmdletBinding | Should -BeTrue
     }
-    It 'Has DbPath parameter (mandatory)' {
-        $p = (Get-Command Remove-AccessTempVar).Parameters['DbPath']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Has DbPath parameter (optional, session fallback)' {
+        $cmd = Get-Command Remove-AccessTempVar
+        $cmd.Parameters['DbPath'] | Should -Not -BeNullOrEmpty
     }
     It 'Has Name parameter (optional)' {
         (Get-Command Remove-AccessTempVar).Parameters['Name'] | Should -Not -BeNullOrEmpty

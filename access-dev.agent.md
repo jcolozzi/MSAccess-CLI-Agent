@@ -10,7 +10,7 @@ You are an Access database development expert. You use the **AccessPOSH** PowerS
 Before doing any work, import the module in a PowerShell 7 terminal:
 
 ```powershell
-Import-Module "K:\Workgrp\PERSONAL SHARE\Colozzi\Access Agent\MSAccess-agent\AccessPOSH\AccessPOSH.psd1" -Force
+Import-Module "C:\PATH\TO\AccessPOSH.psd1" -Force
 ```
 
 Set the database path in a variable for convenience:

@@ -7,15 +7,18 @@ function Import-AccessFromExcel {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][string]$ExcelPath,
-        [Parameter(Mandatory)][string]$TableName,
+        [string]$DbPath,
+        [string]$ExcelPath,
+        [string]$TableName,
         [string]$SheetName,
         [switch]$HasFieldNames,
         [ValidateSet('xlsx','xls')]
         [string]$SpreadsheetType = 'xlsx',
         [switch]$AsJson
     )
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Import-AccessFromExcel'
+    if (-not $ExcelPath) { throw "Import-AccessFromExcel: -ExcelPath is required." }
+    if (-not $TableName) { throw "Import-AccessFromExcel: -TableName is required." }
     $app = Connect-AccessDB -DbPath $DbPath
     if (-not (Test-Path $ExcelPath)) { throw "Excel file not found: $ExcelPath" }
     $ExcelPath = (Resolve-Path $ExcelPath).Path
@@ -41,13 +44,16 @@ function Import-AccessFromCSV {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][string]$FilePath,
-        [Parameter(Mandatory)][string]$TableName,
+        [string]$DbPath,
+        [string]$FilePath,
+        [string]$TableName,
         [switch]$HasFieldNames,
         [string]$SpecificationName,
         [switch]$AsJson
     )
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Import-AccessFromCSV'
+    if (-not $FilePath) { throw "Import-AccessFromCSV: -FilePath is required." }
+    if (-not $TableName) { throw "Import-AccessFromCSV: -TableName is required." }
     $app = Connect-AccessDB -DbPath $DbPath
     if (-not (Test-Path $FilePath)) { throw "File not found: $FilePath" }
     $FilePath = (Resolve-Path $FilePath).Path
@@ -70,12 +76,14 @@ function Import-AccessFromXML {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][string]$XmlPath,
+        [string]$DbPath,
+        [string]$XmlPath,
         [ValidateSet('structureonly','dataonly','structureanddata')]
         [string]$ImportOptions = 'structureanddata',
         [switch]$AsJson
     )
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Import-AccessFromXML'
+    if (-not $XmlPath) { throw "Import-AccessFromXML: -XmlPath is required." }
     $app = Connect-AccessDB -DbPath $DbPath
     if (-not (Test-Path $XmlPath)) { throw "XML file not found: $XmlPath" }
     $XmlPath = (Resolve-Path $XmlPath).Path
@@ -92,15 +100,18 @@ function Import-AccessFromDatabase {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][string]$SourceDbPath,
-        [Parameter(Mandatory)][string]$SourceObject,
+        [string]$DbPath,
+        [string]$SourceDbPath,
+        [string]$SourceObject,
         [string]$DestinationTable,
         [ValidateSet('table','query')]
         [string]$ObjectType = 'table',
         [switch]$StructureOnly,
         [switch]$AsJson
     )
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Import-AccessFromDatabase'
+    if (-not $SourceDbPath) { throw "Import-AccessFromDatabase: -SourceDbPath is required." }
+    if (-not $SourceObject) { throw "Import-AccessFromDatabase: -SourceObject is required." }
     $app = Connect-AccessDB -DbPath $DbPath
     if (-not (Test-Path $SourceDbPath)) { throw "Source database not found: $SourceDbPath" }
     $SourceDbPath = (Resolve-Path $SourceDbPath).Path
@@ -127,15 +138,18 @@ function Export-AccessToExcel {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][string]$ObjectName,
-        [Parameter(Mandatory)][string]$ExcelPath,
+        [string]$DbPath,
+        [string]$ObjectName,
+        [string]$ExcelPath,
         [string]$SheetName,
         [switch]$HasFieldNames,
         [ValidateSet('xlsx','xls')]
         [string]$SpreadsheetType = 'xlsx',
         [switch]$AsJson
     )
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Export-AccessToExcel'
+    if (-not $ObjectName) { throw "Export-AccessToExcel: -ObjectName is required." }
+    if (-not $ExcelPath) { throw "Export-AccessToExcel: -ExcelPath is required." }
     $app = Connect-AccessDB -DbPath $DbPath
     $ExcelPath = [System.IO.Path]::GetFullPath($ExcelPath)
     $typeMap = @{ xlsx = 10; xls = 8 }

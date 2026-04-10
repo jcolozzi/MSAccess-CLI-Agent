@@ -9,9 +9,10 @@ function Get-AccessApplicationInfo {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
+        [string]$DbPath,
         [switch]$AsJson
     )
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Get-AccessApplicationInfo'
     $app = Connect-AccessDB -DbPath $DbPath
 
     $version = $app.Version
@@ -30,9 +31,9 @@ function Get-AccessApplicationInfo {
     $bitness = 'unknown'
     if ($hwnd) {
         try {
-            $pId = [uint32]0
-            [void][AccessPoshNative]::GetWindowThreadProcessId([IntPtr]$hwnd, [ref]$pId)
-            $proc = Get-Process -Id $pId -ErrorAction SilentlyContinue
+            $processId = [uint32]0
+            [void][AccessPoshNative]::GetWindowThreadProcessId([IntPtr]$hwnd, [ref]$processId)
+            $proc = Get-Process -Id $processId -ErrorAction SilentlyContinue
             if ($proc) {
                 # Check if the process is 32-bit on 64-bit OS
                 if ([Environment]::Is64BitOperatingSystem) {
@@ -79,9 +80,10 @@ function Test-AccessRuntime {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
+        [string]$DbPath,
         [switch]$AsJson
     )
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Test-AccessRuntime'
     $app = Connect-AccessDB -DbPath $DbPath
 
     $isRuntime = $false
@@ -110,9 +112,10 @@ function Get-AccessFileInfo {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
+        [string]$DbPath,
         [switch]$AsJson
     )
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Get-AccessFileInfo'
     $app = Connect-AccessDB -DbPath $DbPath
     $db = $app.CurrentDb()
 

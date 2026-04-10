@@ -24,15 +24,11 @@ Describe 'Send-AccessClick' {
     It 'Has CmdletBinding' {
         (Get-Command Send-AccessClick).CmdletBinding | Should -BeTrue
     }
-    It 'Has mandatory X parameter' {
-        $p = (Get-Command Send-AccessClick).Parameters['X']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -Contain $true
+    It 'Throws when -X is omitted' {
+        { Send-AccessClick -DbPath 'x:\fake.accdb' -Y 0 -ImageWidth 100 } | Should -Throw '*-X is required*'
     }
-    It 'Has mandatory Y parameter' {
-        $p = (Get-Command Send-AccessClick).Parameters['Y']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -Contain $true
+    It 'Throws when -Y is omitted' {
+        { Send-AccessClick -DbPath 'x:\fake.accdb' -X 0 -ImageWidth 100 } | Should -Throw '*-Y is required*'
     }
 }
 

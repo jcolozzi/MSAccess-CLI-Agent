@@ -15,10 +15,8 @@ Describe 'New-AccessForm' {
     It 'Has CmdletBinding' {
         (Get-Command New-AccessForm).CmdletBinding | Should -BeTrue
     }
-    It 'Has mandatory FormName parameter' {
-        $p = (Get-Command New-AccessForm).Parameters['FormName']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -Contain $true
+    It 'Throws when -FormName is omitted' {
+        { New-AccessForm -DbPath 'x:\fake.accdb' } | Should -Throw '*-FormName is required*'
     }
 }
 
@@ -26,10 +24,8 @@ Describe 'Get-AccessFormProperty' {
     It 'Has CmdletBinding' {
         (Get-Command Get-AccessFormProperty).CmdletBinding | Should -BeTrue
     }
-    It 'Has mandatory ObjectName parameter' {
-        $p = (Get-Command Get-AccessFormProperty).Parameters['ObjectName']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -Contain $true
+    It 'Throws when -ObjectName is omitted' {
+        { Get-AccessFormProperty -DbPath 'x:\fake.accdb' } | Should -Throw '*-ObjectName is required*'
     }
 }
 

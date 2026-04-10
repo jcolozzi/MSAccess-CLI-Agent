@@ -19,12 +19,18 @@ function Get-AccessVbeLine {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][ValidateSet('module','form','report')][string]$ObjectType,
-        [Parameter(Mandatory)][string]$ObjectName,
-        [Parameter(Mandatory)][int]$StartLine,
-        [Parameter(Mandatory)][int]$Count
+        [string]$DbPath,
+        [ValidateSet('module','form','report')][string]$ObjectType,
+        [string]$ObjectName,
+        [int]$StartLine,
+        [int]$Count
     )
+
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Get-AccessVbeLine'
+    if (-not $ObjectType) { throw "Get-AccessVbeLine: -ObjectType is required (module, form, report)." }
+    if (-not $ObjectName) { throw "Get-AccessVbeLine: -ObjectName is required." }
+    if (-not $PSBoundParameters.ContainsKey('StartLine')) { throw "Get-AccessVbeLine: -StartLine is required." }
+    if (-not $PSBoundParameters.ContainsKey('Count')) { throw "Get-AccessVbeLine: -Count is required." }
 
     $app = Connect-AccessDB -DbPath $DbPath
     $cm = Get-CodeModule -App $app -ObjectType $ObjectType -ObjectName $ObjectName
@@ -60,12 +66,17 @@ function Get-AccessVbeProc {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][ValidateSet('module','form','report')][string]$ObjectType,
-        [Parameter(Mandatory)][string]$ObjectName,
-        [Parameter(Mandatory)][string]$ProcName,
+        [string]$DbPath,
+        [ValidateSet('module','form','report')][string]$ObjectType,
+        [string]$ObjectName,
+        [string]$ProcName,
         [switch]$AsJson
     )
+
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Get-AccessVbeProc'
+    if (-not $ObjectType) { throw "Get-AccessVbeProc: -ObjectType is required (module, form, report)." }
+    if (-not $ObjectName) { throw "Get-AccessVbeProc: -ObjectName is required." }
+    if (-not $ProcName) { throw "Get-AccessVbeProc: -ProcName is required." }
 
     $app = Connect-AccessDB -DbPath $DbPath
     $cm = Get-CodeModule -App $app -ObjectType $ObjectType -ObjectName $ObjectName
@@ -110,11 +121,15 @@ function Get-AccessVbeModuleInfo {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][ValidateSet('module','form','report')][string]$ObjectType,
-        [Parameter(Mandatory)][string]$ObjectName,
+        [string]$DbPath,
+        [ValidateSet('module','form','report')][string]$ObjectType,
+        [string]$ObjectName,
         [switch]$AsJson
     )
+
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Get-AccessVbeModuleInfo'
+    if (-not $ObjectType) { throw "Get-AccessVbeModuleInfo: -ObjectType is required (module, form, report)." }
+    if (-not $ObjectName) { throw "Get-AccessVbeModuleInfo: -ObjectName is required." }
 
     $app = Connect-AccessDB -DbPath $DbPath
     $cm = Get-CodeModule -App $app -ObjectType $ObjectType -ObjectName $ObjectName
@@ -180,14 +195,19 @@ function Set-AccessVbeLine {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][ValidateSet('module','form','report')][string]$ObjectType,
-        [Parameter(Mandatory)][string]$ObjectName,
-        [Parameter(Mandatory)][int]$StartLine,
+        [string]$DbPath,
+        [ValidateSet('module','form','report')][string]$ObjectType,
+        [string]$ObjectName,
+        [int]$StartLine,
         [int]$Count = 0,
         [string]$NewCode = '',
         [switch]$AsJson
     )
+
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Set-AccessVbeLine'
+    if (-not $ObjectType) { throw "Set-AccessVbeLine: -ObjectType is required (module, form, report)." }
+    if (-not $ObjectName) { throw "Set-AccessVbeLine: -ObjectName is required." }
+    if (-not $PSBoundParameters.ContainsKey('StartLine')) { throw "Set-AccessVbeLine: -StartLine is required." }
 
     $app = Connect-AccessDB -DbPath $DbPath
     $cm = Get-CodeModule -App $app -ObjectType $ObjectType -ObjectName $ObjectName
@@ -247,13 +267,18 @@ function Set-AccessVbeProc {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][ValidateSet('module','form','report')][string]$ObjectType,
-        [Parameter(Mandatory)][string]$ObjectName,
-        [Parameter(Mandatory)][string]$ProcName,
+        [string]$DbPath,
+        [ValidateSet('module','form','report')][string]$ObjectType,
+        [string]$ObjectName,
+        [string]$ProcName,
         [string]$NewCode = '',
         [switch]$AsJson
     )
+
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Set-AccessVbeProc'
+    if (-not $ObjectType) { throw "Set-AccessVbeProc: -ObjectType is required (module, form, report)." }
+    if (-not $ObjectName) { throw "Set-AccessVbeProc: -ObjectName is required." }
+    if (-not $ProcName) { throw "Set-AccessVbeProc: -ProcName is required." }
 
     $app = Connect-AccessDB -DbPath $DbPath
 
@@ -329,13 +354,19 @@ function Update-AccessVbeProc {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][ValidateSet('module','form','report')][string]$ObjectType,
-        [Parameter(Mandatory)][string]$ObjectName,
-        [Parameter(Mandatory)][string]$ProcName,
-        [Parameter(Mandatory)][array]$Patches,
+        [string]$DbPath,
+        [ValidateSet('module','form','report')][string]$ObjectType,
+        [string]$ObjectName,
+        [string]$ProcName,
+        [array]$Patches,
         [switch]$AsJson
     )
+
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Update-AccessVbeProc'
+    if (-not $ObjectType) { throw "Update-AccessVbeProc: -ObjectType is required (module, form, report)." }
+    if (-not $ObjectName) { throw "Update-AccessVbeProc: -ObjectName is required." }
+    if (-not $ProcName) { throw "Update-AccessVbeProc: -ProcName is required." }
+    if (-not $Patches) { throw "Update-AccessVbeProc: -Patches is required." }
 
     $app = Connect-AccessDB -DbPath $DbPath
 
@@ -496,12 +527,17 @@ function Add-AccessVbeCode {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][ValidateSet('module','form','report')][string]$ObjectType,
-        [Parameter(Mandatory)][string]$ObjectName,
-        [Parameter(Mandatory)][string]$Code,
+        [string]$DbPath,
+        [ValidateSet('module','form','report')][string]$ObjectType,
+        [string]$ObjectName,
+        [string]$Code,
         [switch]$AsJson
     )
+
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Add-AccessVbeCode'
+    if (-not $ObjectType) { throw "Add-AccessVbeCode: -ObjectType is required (module, form, report)." }
+    if (-not $ObjectName) { throw "Add-AccessVbeCode: -ObjectName is required." }
+    if (-not $Code) { throw "Add-AccessVbeCode: -Code is required." }
 
     $app = Connect-AccessDB -DbPath $DbPath
     $cm = Get-CodeModule -App $app -ObjectType $ObjectType -ObjectName $ObjectName
@@ -546,14 +582,19 @@ function Find-AccessVbeText {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][ValidateSet('module','form','report')][string]$ObjectType,
-        [Parameter(Mandatory)][string]$ObjectName,
-        [Parameter(Mandatory)][string]$SearchText,
+        [string]$DbPath,
+        [ValidateSet('module','form','report')][string]$ObjectType,
+        [string]$ObjectName,
+        [string]$SearchText,
         [switch]$MatchCase,
         [switch]$UseRegex,
         [switch]$AsJson
     )
+
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Find-AccessVbeText'
+    if (-not $ObjectType) { throw "Find-AccessVbeText: -ObjectType is required (module, form, report)." }
+    if (-not $ObjectName) { throw "Find-AccessVbeText: -ObjectName is required." }
+    if (-not $SearchText) { throw "Find-AccessVbeText: -SearchText is required." }
 
     $app = Connect-AccessDB -DbPath $DbPath
     $cm = Get-CodeModule -App $app -ObjectType $ObjectType -ObjectName $ObjectName
@@ -604,13 +645,16 @@ function Search-AccessVbe {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][string]$SearchText,
+        [string]$DbPath,
+        [string]$SearchText,
         [switch]$MatchCase,
         [switch]$UseRegex,
         [int]$MaxResults = 100,
         [switch]$AsJson
     )
+
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Search-AccessVbe'
+    if (-not $SearchText) { throw "Search-AccessVbe: -SearchText is required." }
 
     $app = Connect-AccessDB -DbPath $DbPath
     $objects = Get-AccessObject -DbPath $DbPath -ObjectType all
@@ -679,13 +723,16 @@ function Search-AccessQuery {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][string]$SearchText,
+        [string]$DbPath,
+        [string]$SearchText,
         [switch]$MatchCase,
         [switch]$UseRegex,
         [int]$MaxResults = 100,
         [switch]$AsJson
     )
+
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Search-AccessQuery'
+    if (-not $SearchText) { throw "Search-AccessQuery: -SearchText is required." }
 
     $app = Connect-AccessDB -DbPath $DbPath
     $db = $app.CurrentDb()
@@ -732,13 +779,16 @@ function Find-AccessUsage {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][string]$SearchText,
+        [string]$DbPath,
+        [string]$SearchText,
         [switch]$MatchCase,
         [switch]$UseRegex,
         [int]$MaxResults = 200,
         [switch]$AsJson
     )
+
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Find-AccessUsage'
+    if (-not $SearchText) { throw "Find-AccessUsage: -SearchText is required." }
 
     # 1. VBA matches
     $vbaResult = Search-AccessVbe -DbPath $DbPath -SearchText $SearchText -MatchCase:$MatchCase -UseRegex:$UseRegex -MaxResults $MaxResults
@@ -833,10 +883,13 @@ function Invoke-AccessMacro {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][string]$MacroName,
+        [string]$DbPath,
+        [string]$MacroName,
         [switch]$AsJson
     )
+
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Invoke-AccessMacro'
+    if (-not $MacroName) { throw "Invoke-AccessMacro: -MacroName is required." }
 
     $app = Connect-AccessDB -DbPath $DbPath
     try {
@@ -872,11 +925,14 @@ function Invoke-AccessVba {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][string]$Procedure,
+        [string]$DbPath,
+        [string]$Procedure,
         [object[]]$Arguments,
         [switch]$AsJson
     )
+
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Invoke-AccessVba'
+    if (-not $Procedure) { throw "Invoke-AccessVba: -Procedure is required." }
 
     $app = Connect-AccessDB -DbPath $DbPath
     $callArgs = if ($Arguments) { $Arguments } else { @() }
@@ -968,10 +1024,13 @@ function Invoke-AccessEval {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][string]$Expression,
+        [string]$DbPath,
+        [string]$Expression,
         [switch]$AsJson
     )
+
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Invoke-AccessEval'
+    if (-not $Expression) { throw "Invoke-AccessEval: -Expression is required." }
 
     $app = Connect-AccessDB -DbPath $DbPath
     try {
@@ -1000,9 +1059,11 @@ function Test-AccessVbaCompile {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
+        [string]$DbPath,
         [switch]$AsJson
     )
+
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Test-AccessVbaCompile'
 
     $app = Connect-AccessDB -DbPath $DbPath
 
@@ -1042,4 +1103,155 @@ function Test-AccessVbaCompile {
     $script:AccessSession.CmCache = @{}
 
     Format-AccessOutput -AsJson:$AsJson -Data @{ status = 'compiled' }
+}
+
+function Import-AccessVbaFile {
+    <#
+    .SYNOPSIS
+        Import a .bas (standard module) or .cls (class module) file into an Access
+        database via VBComponents.Import. Validates ANSI encoding and auto-converts
+        if needed. Replaces any existing component with the same name.
+    .PARAMETER DbPath
+        Path to the Access database.
+    .PARAMETER FilePath
+        Path to the .bas or .cls file to import.
+    .PARAMETER Force
+        Auto-convert non-ANSI files to a temp ANSI copy before importing (default).
+        Set -Force:$false to error on non-ANSI files instead of converting.
+    .PARAMETER AsJson
+        Return JSON string instead of PSCustomObject.
+    .EXAMPLE
+        Import-AccessVbaFile -DbPath "C:\db.accdb" -FilePath "C:\modules\clsHelper.cls"
+    .EXAMPLE
+        Import-AccessVbaFile -DbPath "C:\db.accdb" -FilePath "C:\modules\modUtils.bas" -AsJson
+    .EXAMPLE
+        # Import multiple files
+        Get-ChildItem "C:\vba\*.cls","C:\vba\*.bas" | ForEach-Object {
+            Import-AccessVbaFile -DbPath "C:\db.accdb" -FilePath $_.FullName -AsJson
+        }
+    #>
+    [CmdletBinding()]
+    param(
+        [string]$DbPath,
+        [string]$FilePath,
+        [switch]$Force = $true,
+        [switch]$AsJson
+    )
+
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Import-AccessVbaFile'
+    if (-not $FilePath) { throw "Import-AccessVbaFile: -FilePath is required." }
+    if (-not (Test-Path -LiteralPath $FilePath -PathType Leaf)) {
+        throw "Import-AccessVbaFile: File not found: $FilePath"
+    }
+
+    $FilePath = (Resolve-Path -LiteralPath $FilePath).Path
+    $ext = [System.IO.Path]::GetExtension($FilePath).ToLower()
+    if ($ext -notin '.bas', '.cls') {
+        throw "Import-AccessVbaFile: Only .bas and .cls files are supported. Got '$ext'."
+    }
+
+    # Validate encoding
+    $encCheck = Test-VbaFileEncoding -Path $FilePath
+    $importPath = $FilePath
+    $converted = $false
+    $tmpPath = $null
+
+    if (-not $encCheck.IsAnsi) {
+        if (-not $Force) {
+            throw "Import-AccessVbaFile: $($encCheck.Reason) Use -Force to auto-convert."
+        }
+        Write-Verbose "Non-ANSI encoding detected ($($encCheck.Encoding)). Converting to ANSI temp copy."
+        $tmpPath = ConvertTo-AnsiTempFile -SourcePath $FilePath
+        $importPath = $tmpPath
+        $converted = $true
+    }
+
+    try {
+        $app = Connect-AccessDB -DbPath $DbPath
+        $proj = $app.VBE.ActiveVBProject
+
+        # Derive module name from the file's Attribute VB_Name or from filename
+        $moduleName = [System.IO.Path]::GetFileNameWithoutExtension($FilePath)
+
+        # Remove existing component if present
+        try {
+            $existing = $proj.VBComponents.Item($moduleName)
+            if ($null -ne $existing) {
+                $proj.VBComponents.Remove($existing)
+                Write-Verbose "Removed existing component: $moduleName"
+            }
+        } catch {
+            # Component doesn't exist — that's fine
+        }
+
+        # Import via VBComponents.Import — correctly handles .cls as class module
+        $imported = $proj.VBComponents.Import($importPath)
+        $typeName = switch ($imported.Type) {
+            1 { 'standard_module' }
+            2 { 'class_module' }
+            default { "type_$($imported.Type)" }
+        }
+
+        # Invalidate VBE caches
+        $cacheKey = "module:$($imported.Name)"
+        $script:AccessSession.VbeCodeCache.Remove($cacheKey)
+        $script:AccessSession.CmCache.Remove($cacheKey)
+
+        $result = [ordered]@{
+            status       = 'imported'
+            name         = $imported.Name
+            module_type  = $typeName
+            source_file  = $FilePath
+            converted    = $converted
+        }
+        if ($converted) {
+            $result['original_encoding'] = $encCheck.Encoding
+        }
+        Format-AccessOutput -AsJson:$AsJson -Data $result
+    } finally {
+        if ($tmpPath -and (Test-Path -LiteralPath $tmpPath)) {
+            Remove-Item -LiteralPath $tmpPath -Force -ErrorAction SilentlyContinue
+        }
+    }
+}
+
+function Test-AccessVbaFileEncoding {
+    <#
+    .SYNOPSIS
+        Check whether a .bas or .cls file has the correct ANSI encoding
+        (Windows-1252, no BOM) required by VBComponents.Import.
+    .PARAMETER FilePath
+        Path to the .bas or .cls file to check.
+    .PARAMETER AsJson
+        Return JSON string instead of PSCustomObject.
+    .EXAMPLE
+        Test-AccessVbaFileEncoding -FilePath "C:\modules\clsHelper.cls" -AsJson
+    .EXAMPLE
+        Get-ChildItem "C:\vba\*" -Include *.bas,*.cls | ForEach-Object {
+            Test-AccessVbaFileEncoding -FilePath $_.FullName -AsJson
+        }
+    #>
+    [CmdletBinding()]
+    param(
+        [string]$FilePath,
+        [switch]$AsJson
+    )
+
+    if (-not $FilePath) { throw "Test-AccessVbaFileEncoding: -FilePath is required." }
+    if (-not (Test-Path -LiteralPath $FilePath -PathType Leaf)) {
+        throw "Test-AccessVbaFileEncoding: File not found: $FilePath"
+    }
+
+    $FilePath = (Resolve-Path -LiteralPath $FilePath).Path
+    $check = Test-VbaFileEncoding -Path $FilePath
+
+    $result = [ordered]@{
+        file     = $FilePath
+        is_ansi  = $check.IsAnsi
+        encoding = $check.Encoding
+    }
+    if (-not $check.IsAnsi) {
+        $result['reason'] = $check.Reason
+    }
+    Format-AccessOutput -AsJson:$AsJson -Data $result
 }

@@ -15,15 +15,12 @@ Describe 'Get-AccessSubDataSheet' {
     It 'Has CmdletBinding' {
         (Get-Command Get-AccessSubDataSheet).CmdletBinding | Should -BeTrue
     }
-    It 'Has DbPath parameter (mandatory)' {
-        $p = (Get-Command Get-AccessSubDataSheet).Parameters['DbPath']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Has DbPath parameter (optional, session fallback)' {
+        $cmd = Get-Command Get-AccessSubDataSheet
+        $cmd.Parameters['DbPath'] | Should -Not -BeNullOrEmpty
     }
-    It 'Has TableName parameter (mandatory)' {
-        $p = (Get-Command Get-AccessSubDataSheet).Parameters['TableName']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Throws when -TableName is omitted' {
+        { Get-AccessSubDataSheet -DbPath 'x:\fake.accdb' } | Should -Throw '*-TableName is required*'
     }
     It 'Has AsJson switch' {
         $p = (Get-Command Get-AccessSubDataSheet).Parameters['AsJson']
@@ -36,15 +33,12 @@ Describe 'Set-AccessSubDataSheet' {
     It 'Has CmdletBinding' {
         (Get-Command Set-AccessSubDataSheet).CmdletBinding | Should -BeTrue
     }
-    It 'Has DbPath parameter (mandatory)' {
-        $p = (Get-Command Set-AccessSubDataSheet).Parameters['DbPath']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Has DbPath parameter (optional, session fallback)' {
+        $cmd = Get-Command Set-AccessSubDataSheet
+        $cmd.Parameters['DbPath'] | Should -Not -BeNullOrEmpty
     }
-    It 'Has TableName parameter (mandatory)' {
-        $p = (Get-Command Set-AccessSubDataSheet).Parameters['TableName']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Throws when -TableName is omitted' {
+        { Set-AccessSubDataSheet -DbPath 'x:\fake.accdb' } | Should -Throw '*-TableName is required*'
     }
     It 'Has SubDataSheetName parameter' {
         (Get-Command Set-AccessSubDataSheet).Parameters['SubDataSheetName'] | Should -Not -BeNullOrEmpty

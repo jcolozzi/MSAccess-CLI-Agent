@@ -11,11 +11,13 @@ function New-AccessReport {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][string]$ReportName,
+        [string]$DbPath,
+        [string]$ReportName,
         [string]$RecordSource,
         [switch]$AsJson
     )
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'New-AccessReport'
+    if (-not $ReportName) { throw "New-AccessReport: -ReportName is required." }
 
     $app = Connect-AccessDB -DbPath $DbPath
 
@@ -57,10 +59,12 @@ function Get-AccessGroupLevel {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][string]$ReportName,
+        [string]$DbPath,
+        [string]$ReportName,
         [switch]$AsJson
     )
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Get-AccessGroupLevel'
+    if (-not $ReportName) { throw "Get-AccessGroupLevel: -ReportName is required." }
 
     $app = Connect-AccessDB -DbPath $DbPath
 
@@ -114,15 +118,18 @@ function Set-AccessGroupLevel {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][string]$ReportName,
-        [Parameter(Mandatory)][string]$Expression,
+        [string]$DbPath,
+        [string]$ReportName,
+        [string]$Expression,
         [switch]$GroupHeader,
         [switch]$GroupFooter,
         [ValidateSet('ascending','descending')]
         [string]$SortOrder = 'ascending',
         [switch]$AsJson
     )
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Set-AccessGroupLevel'
+    if (-not $ReportName) { throw "Set-AccessGroupLevel: -ReportName is required." }
+    if (-not $Expression) { throw "Set-AccessGroupLevel: -Expression is required." }
 
     $app = Connect-AccessDB -DbPath $DbPath
 
@@ -168,11 +175,14 @@ function Remove-AccessGroupLevel {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][string]$ReportName,
-        [Parameter(Mandatory)][int]$LevelIndex,
+        [string]$DbPath,
+        [string]$ReportName,
+        [int]$LevelIndex,
         [switch]$AsJson
     )
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Remove-AccessGroupLevel'
+    if (-not $ReportName) { throw "Remove-AccessGroupLevel: -ReportName is required." }
+    if (-not $PSBoundParameters.ContainsKey('LevelIndex')) { throw "Remove-AccessGroupLevel: -LevelIndex is required." }
 
     $app = Connect-AccessDB -DbPath $DbPath
 

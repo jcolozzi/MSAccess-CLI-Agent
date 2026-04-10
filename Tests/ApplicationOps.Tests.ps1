@@ -17,10 +17,9 @@ Describe 'Get-AccessApplicationInfo' {
     It 'Has CmdletBinding' {
         (Get-Command Get-AccessApplicationInfo).CmdletBinding | Should -BeTrue
     }
-    It 'Has DbPath parameter (mandatory)' {
-        $p = (Get-Command Get-AccessApplicationInfo).Parameters['DbPath']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Has DbPath parameter (optional, session fallback)' {
+        $cmd = Get-Command Get-AccessApplicationInfo
+        $cmd.Parameters['DbPath'] | Should -Not -BeNullOrEmpty
     }
     It 'Has AsJson switch' {
         $p = (Get-Command Get-AccessApplicationInfo).Parameters['AsJson']
@@ -33,10 +32,9 @@ Describe 'Test-AccessRuntime' {
     It 'Has CmdletBinding' {
         (Get-Command Test-AccessRuntime).CmdletBinding | Should -BeTrue
     }
-    It 'Has DbPath parameter (mandatory)' {
-        $p = (Get-Command Test-AccessRuntime).Parameters['DbPath']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Has DbPath parameter (optional, session fallback)' {
+        $cmd = Get-Command Test-AccessRuntime
+        $cmd.Parameters['DbPath'] | Should -Not -BeNullOrEmpty
     }
     It 'Has AsJson switch' {
         (Get-Command Test-AccessRuntime).Parameters['AsJson'].SwitchParameter | Should -BeTrue
@@ -47,10 +45,9 @@ Describe 'Get-AccessFileInfo' {
     It 'Has CmdletBinding' {
         (Get-Command Get-AccessFileInfo).CmdletBinding | Should -BeTrue
     }
-    It 'Has DbPath parameter (mandatory)' {
-        $p = (Get-Command Get-AccessFileInfo).Parameters['DbPath']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Has DbPath parameter (optional, session fallback)' {
+        $cmd = Get-Command Get-AccessFileInfo
+        $cmd.Parameters['DbPath'] | Should -Not -BeNullOrEmpty
     }
     It 'Has AsJson switch' {
         $p = (Get-Command Get-AccessFileInfo).Parameters['AsJson']

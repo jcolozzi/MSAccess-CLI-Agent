@@ -15,10 +15,9 @@ Describe 'Test-AccessDatabasePassword' {
     It 'Has CmdletBinding' {
         (Get-Command Test-AccessDatabasePassword).CmdletBinding | Should -BeTrue
     }
-    It 'Has DbPath parameter (mandatory)' {
-        $p = (Get-Command Test-AccessDatabasePassword).Parameters['DbPath']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Has DbPath parameter (optional, session fallback)' {
+        $cmd = Get-Command Test-AccessDatabasePassword
+        $cmd.Parameters['DbPath'] | Should -Not -BeNullOrEmpty
     }
     It 'Has AsJson switch' {
         $p = (Get-Command Test-AccessDatabasePassword).Parameters['AsJson']
@@ -31,15 +30,12 @@ Describe 'Set-AccessDatabasePassword' {
     It 'Has CmdletBinding' {
         (Get-Command Set-AccessDatabasePassword).CmdletBinding | Should -BeTrue
     }
-    It 'Has DbPath parameter (mandatory)' {
-        $p = (Get-Command Set-AccessDatabasePassword).Parameters['DbPath']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Has DbPath parameter (optional, session fallback)' {
+        $cmd = Get-Command Set-AccessDatabasePassword
+        $cmd.Parameters['DbPath'] | Should -Not -BeNullOrEmpty
     }
-    It 'Has NewPassword parameter (mandatory)' {
-        $p = (Get-Command Set-AccessDatabasePassword).Parameters['NewPassword']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Throws when -NewPassword is omitted' {
+        { Set-AccessDatabasePassword -DbPath 'x:\fake.accdb' } | Should -Throw '*-NewPassword is required*'
     }
     It 'Has OldPassword parameter (optional)' {
         (Get-Command Set-AccessDatabasePassword).Parameters['OldPassword'] | Should -Not -BeNullOrEmpty
@@ -53,15 +49,12 @@ Describe 'Remove-AccessDatabasePassword' {
     It 'Has CmdletBinding' {
         (Get-Command Remove-AccessDatabasePassword).CmdletBinding | Should -BeTrue
     }
-    It 'Has DbPath parameter (mandatory)' {
-        $p = (Get-Command Remove-AccessDatabasePassword).Parameters['DbPath']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Has DbPath parameter (optional, session fallback)' {
+        $cmd = Get-Command Remove-AccessDatabasePassword
+        $cmd.Parameters['DbPath'] | Should -Not -BeNullOrEmpty
     }
-    It 'Has CurrentPassword parameter (mandatory)' {
-        $p = (Get-Command Remove-AccessDatabasePassword).Parameters['CurrentPassword']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Throws when -CurrentPassword is omitted' {
+        { Remove-AccessDatabasePassword -DbPath 'x:\fake.accdb' } | Should -Throw '*-CurrentPassword is required*'
     }
     It 'Has AsJson switch' {
         (Get-Command Remove-AccessDatabasePassword).Parameters['AsJson'].SwitchParameter | Should -BeTrue
@@ -72,10 +65,9 @@ Describe 'Get-AccessDatabaseEncryption' {
     It 'Has CmdletBinding' {
         (Get-Command Get-AccessDatabaseEncryption).CmdletBinding | Should -BeTrue
     }
-    It 'Has DbPath parameter (mandatory)' {
-        $p = (Get-Command Get-AccessDatabaseEncryption).Parameters['DbPath']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -BeTrue
+    It 'Has DbPath parameter (optional, session fallback)' {
+        $cmd = Get-Command Get-AccessDatabaseEncryption
+        $cmd.Parameters['DbPath'] | Should -Not -BeNullOrEmpty
     }
     It 'Has AsJson switch' {
         $p = (Get-Command Get-AccessDatabaseEncryption).Parameters['AsJson']

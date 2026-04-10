@@ -57,10 +57,8 @@ Describe 'Remove-AccessRelationship' {
     It 'Has CmdletBinding' {
         (Get-Command Remove-AccessRelationship).CmdletBinding | Should -BeTrue
     }
-    It 'Has mandatory Name parameter' {
-        $p = (Get-Command Remove-AccessRelationship).Parameters['Name']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -Contain $true
+    It 'Throws when -Name is omitted' {
+        { Remove-AccessRelationship -DbPath 'x:\fake.accdb' } | Should -Throw '*-Name is required*'
     }
 }
 
@@ -74,10 +72,8 @@ Describe 'Set-AccessReference' {
     It 'Has CmdletBinding' {
         (Get-Command Set-AccessReference).CmdletBinding | Should -BeTrue
     }
-    It 'Has mandatory Action parameter' {
-        $p = (Get-Command Set-AccessReference).Parameters['Action']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -Contain $true
+    It 'Throws when -Action is omitted' {
+        { Set-AccessReference -DbPath 'x:\fake.accdb' } | Should -Throw '*-Action is required*'
     }
 }
 

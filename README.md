@@ -1,14 +1,11 @@
 # MSAccess-agent
 
-**AccessPOSH** is a PowerShell module port of the Python unmateria/MCP-Access server, expanded to 91 native PowerShell functions.
-
-No MCP server needed — A custom access-dev agent calls functions directly via terminal.
-
-The agent will use the **AccessPOSH** module to interact with Access databases via COM automation. 
+Access-POSH.ps1 is a PowerShell port of [unmateria/MCP-Access](https://github.com/unmateria/MCP-Access) that exposes 50+ commands for automating Microsoft Access (creating databases, running SQL, editing forms, VBA, etc.) using COM. Instead of running a separate MCP server, a custom access-dev agent in VS Code calls these PowerShell functions directly in a terminal.
 
 Setup:
 1. Clone or download the repo
-2. Put the two .md files in C:\Users\\%USERNAME%\AppData\Roaming\Code\User\prompts folder (user level access) or create a .github\agents folder in your project folder and save the two .md files in the agent folder (_VS Code detects any .md files in the .github/agents folder of your workspace as custom agents_)
+2. Put the two .md files in C:\Users\\%USERNAME%\AppData\Roaming\Code\User\prompts folder (user level access) or create a .github\agents folder in your project folder and save the two .md files in the agent folder 
+>_**Note:** VS Code detects any .md files in the .github/agents folder of your workspace as custom agents_
 3. Replace the path in the .md files to the location of the **AccessPOSH.psd1** module on your computer
 4. Select access-dev from the agent picker before prompting
 

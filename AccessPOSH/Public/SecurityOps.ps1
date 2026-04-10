@@ -10,9 +10,10 @@ function Test-AccessDatabasePassword {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
+        [string]$DbPath,
         [switch]$AsJson
     )
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Test-AccessDatabasePassword'
     $app = Connect-AccessDB -DbPath $DbPath
 
     $hasPassword = $false
@@ -47,11 +48,13 @@ function Set-AccessDatabasePassword {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][string]$NewPassword,
+        [string]$DbPath,
+        [string]$NewPassword,
         [string]$OldPassword,
         [switch]$AsJson
     )
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Set-AccessDatabasePassword'
+    if (-not $NewPassword) { throw "Set-AccessDatabasePassword: -NewPassword is required." }
     $app = Connect-AccessDB -DbPath $DbPath
     $db = $app.CurrentDb()
 
@@ -79,10 +82,12 @@ function Remove-AccessDatabasePassword {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][string]$CurrentPassword,
+        [string]$DbPath,
+        [string]$CurrentPassword,
         [switch]$AsJson
     )
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Remove-AccessDatabasePassword'
+    if (-not $CurrentPassword) { throw "Remove-AccessDatabasePassword: -CurrentPassword is required." }
     $app = Connect-AccessDB -DbPath $DbPath
     $db = $app.CurrentDb()
 
@@ -109,9 +114,10 @@ function Get-AccessDatabaseEncryption {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
+        [string]$DbPath,
         [switch]$AsJson
     )
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Get-AccessDatabaseEncryption'
     $app = Connect-AccessDB -DbPath $DbPath
     $db = $app.CurrentDb()
 

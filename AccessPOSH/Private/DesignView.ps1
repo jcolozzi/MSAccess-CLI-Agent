@@ -7,9 +7,11 @@ function Open-InDesignView {
         Uses $script:AccessSession.App directly for COM reliability.
     #>
     param(
-        [Parameter(Mandatory)][ValidateSet('form','report')][string]$ObjectType,
-        [Parameter(Mandatory)][string]$ObjectName
+        [ValidateSet('form','report')][string]$ObjectType,
+        [string]$ObjectName
     )
+    if (-not $ObjectType) { throw "Open-InDesignView: -ObjectType is required (form, report)." }
+    if (-not $ObjectName) { throw "Open-InDesignView: -ObjectName is required." }
     try {
         if ($ObjectType -eq 'form') {
             $script:AccessSession.App.DoCmd.OpenForm($ObjectName, $script:AC_DESIGN)
@@ -30,9 +32,11 @@ function Get-DesignObject {
         PowerShell COM marshaling issue.
     #>
     param(
-        [Parameter(Mandatory)][ValidateSet('form','report')][string]$ObjectType,
-        [Parameter(Mandatory)][string]$ObjectName
+        [ValidateSet('form','report')][string]$ObjectType,
+        [string]$ObjectName
     )
+    if (-not $ObjectType) { throw "Get-DesignObject: -ObjectType is required (form, report)." }
+    if (-not $ObjectName) { throw "Get-DesignObject: -ObjectName is required." }
     $sessionApp = $script:AccessSession.App
     if ($ObjectType -eq 'form') {
         $result = $sessionApp.Screen.ActiveForm
@@ -40,7 +44,7 @@ function Get-DesignObject {
         $result = $sessionApp.Screen.ActiveReport
     }
     if ($null -eq $result -or $result.Name -ne $ObjectName) {
-        throw "Cannot get '$ObjectName' ($ObjectType) — is it open in Design view?"
+        throw "Cannot get '$ObjectName' ($ObjectType) - is it open in Design view?"
     }
     $result
 }
@@ -52,9 +56,11 @@ function Save-AndCloseDesign {
         Uses $script:AccessSession.App directly for COM reliability.
     #>
     param(
-        [Parameter(Mandatory)][ValidateSet('form','report')][string]$ObjectType,
-        [Parameter(Mandatory)][string]$ObjectName
+        [ValidateSet('form','report')][string]$ObjectType,
+        [string]$ObjectName
     )
+    if (-not $ObjectType) { throw "Save-AndCloseDesign: -ObjectType is required (form, report)." }
+    if (-not $ObjectName) { throw "Save-AndCloseDesign: -ObjectName is required." }
     $acType = if ($ObjectType -eq 'form') { $script:AC_TYPE['form'] } else { $script:AC_TYPE['report'] }
     try {
         $script:AccessSession.App.DoCmd.Close($acType, $ObjectName, $script:AC_SAVE_YES)
@@ -81,8 +87,9 @@ function ConvertFrom-ControlBlock {
           form_end_idx   — 0-based line index of the closing End
     #>
     param(
-        [Parameter(Mandatory)][string]$FormText
+        [string]$FormText
     )
+    if (-not $FormText) { throw "ConvertFrom-ControlBlock: -FormText is required." }
 
     $lines = $FormText -split "`r?`n"
     $result = [ordered]@{
@@ -262,10 +269,13 @@ function Get-ParsedControls {
         Return parsed controls for a form/report, using the ControlsCache (internal helper).
     #>
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][ValidateSet('form','report')][string]$ObjectType,
-        [Parameter(Mandatory)][string]$ObjectName
+        [string]$DbPath,
+        [ValidateSet('form','report')][string]$ObjectType,
+        [string]$ObjectName
     )
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Get-ParsedControls'
+    if (-not $ObjectType) { throw "Get-ParsedControls: -ObjectType is required (form, report)." }
+    if (-not $ObjectName) { throw "Get-ParsedControls: -ObjectName is required." }
     $cacheKey = "${ObjectType}:${ObjectName}"
     if (-not $script:AccessSession.ControlsCache.ContainsKey($cacheKey)) {
         $text = Get-AccessCode -DbPath $DbPath -ObjectType $ObjectType -Name $ObjectName

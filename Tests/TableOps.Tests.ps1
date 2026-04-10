@@ -15,10 +15,8 @@ Describe 'Get-AccessTableInfo' {
     It 'Has CmdletBinding' {
         (Get-Command Get-AccessTableInfo).CmdletBinding | Should -BeTrue
     }
-    It 'Has mandatory TableName parameter' {
-        $p = (Get-Command Get-AccessTableInfo).Parameters['TableName']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -Contain $true
+    It 'Throws when -TableName is omitted' {
+        { Get-AccessTableInfo -DbPath 'x:\fake.accdb' } | Should -Throw '*-TableName is required*'
     }
 }
 
@@ -26,15 +24,11 @@ Describe 'New-AccessTable' {
     It 'Has CmdletBinding' {
         (Get-Command New-AccessTable).CmdletBinding | Should -BeTrue
     }
-    It 'Has mandatory TableName parameter' {
-        $p = (Get-Command New-AccessTable).Parameters['TableName']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -Contain $true
+    It 'Throws when -TableName is omitted' {
+        { New-AccessTable -DbPath 'x:\fake.accdb' } | Should -Throw '*-TableName is required*'
     }
-    It 'Has mandatory Fields parameter' {
-        $p = (Get-Command New-AccessTable).Parameters['Fields']
-        $p | Should -Not -BeNullOrEmpty
-        $p.Attributes.Where({ $_ -is [System.Management.Automation.ParameterAttribute] }).Mandatory | Should -Contain $true
+    It 'Throws when -Fields is omitted' {
+        { New-AccessTable -DbPath 'x:\fake.accdb' -TableName 'T' } | Should -Throw '*-Fields is required*'
     }
 }
 

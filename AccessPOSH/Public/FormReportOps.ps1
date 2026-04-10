@@ -20,11 +20,14 @@ function New-AccessForm {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][string]$FormName,
+        [string]$DbPath,
+        [string]$FormName,
         [switch]$HasHeader,
         [switch]$AsJson
     )
+
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'New-AccessForm'
+    if (-not $FormName) { throw "New-AccessForm: -FormName is required." }
 
     $app = Connect-AccessDB -DbPath $DbPath
     $autoName = $null
@@ -90,12 +93,16 @@ function Get-AccessFormProperty {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][ValidateSet('form','report')][string]$ObjectType,
-        [Parameter(Mandatory)][string]$ObjectName,
+        [string]$DbPath,
+        [ValidateSet('form','report')][string]$ObjectType,
+        [string]$ObjectName,
         [string[]]$PropertyNames,
         [switch]$AsJson
     )
+
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Get-AccessFormProperty'
+    if (-not $ObjectType) { throw "Get-AccessFormProperty: -ObjectType is required (form, report)." }
+    if (-not $ObjectName) { throw "Get-AccessFormProperty: -ObjectName is required." }
 
     $null = Connect-AccessDB -DbPath $DbPath
     Open-InDesignView -ObjectType $ObjectType -ObjectName $ObjectName
@@ -166,12 +173,17 @@ function Set-AccessFormProperty {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][ValidateSet('form','report')][string]$ObjectType,
-        [Parameter(Mandatory)][string]$ObjectName,
-        [Parameter(Mandatory)][hashtable]$Properties,
+        [string]$DbPath,
+        [ValidateSet('form','report')][string]$ObjectType,
+        [string]$ObjectName,
+        [hashtable]$Properties,
         [switch]$AsJson
     )
+
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Set-AccessFormProperty'
+    if (-not $ObjectType) { throw "Set-AccessFormProperty: -ObjectType is required (form, report)." }
+    if (-not $ObjectName) { throw "Set-AccessFormProperty: -ObjectName is required." }
+    if (-not $Properties -or $Properties.Count -eq 0) { throw "Set-AccessFormProperty: -Properties is required." }
 
     $null = Connect-AccessDB -DbPath $DbPath
     Open-InDesignView -ObjectType $ObjectType -ObjectName $ObjectName
@@ -219,11 +231,15 @@ function Get-AccessControl {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][ValidateSet('form','report')][string]$ObjectType,
-        [Parameter(Mandatory)][string]$ObjectName,
+        [string]$DbPath,
+        [ValidateSet('form','report')][string]$ObjectType,
+        [string]$ObjectName,
         [switch]$AsJson
     )
+
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Get-AccessControl'
+    if (-not $ObjectType) { throw "Get-AccessControl: -ObjectType is required (form, report)." }
+    if (-not $ObjectName) { throw "Get-AccessControl: -ObjectName is required." }
 
     $parsed = Get-ParsedControls -DbPath $DbPath -ObjectType $ObjectType -ObjectName $ObjectName
     $controls = @(
@@ -263,12 +279,17 @@ function Get-AccessControlDetail {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][ValidateSet('form','report')][string]$ObjectType,
-        [Parameter(Mandatory)][string]$ObjectName,
-        [Parameter(Mandatory)][string]$ControlName,
+        [string]$DbPath,
+        [ValidateSet('form','report')][string]$ObjectType,
+        [string]$ObjectName,
+        [string]$ControlName,
         [switch]$AsJson
     )
+
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Get-AccessControlDetail'
+    if (-not $ObjectType) { throw "Get-AccessControlDetail: -ObjectType is required (form, report)." }
+    if (-not $ObjectName) { throw "Get-AccessControlDetail: -ObjectName is required." }
+    if (-not $ControlName) { throw "Get-AccessControlDetail: -ControlName is required." }
 
     $parsed = Get-ParsedControls -DbPath $DbPath -ObjectType $ObjectType -ObjectName $ObjectName
     $found = $parsed.controls | Where-Object { $_.name -ieq $ControlName } | Select-Object -First 1
@@ -306,14 +327,19 @@ function New-AccessControl {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][ValidateSet('form','report')][string]$ObjectType,
-        [Parameter(Mandatory)][string]$ObjectName,
-        [Parameter(Mandatory)]$ControlType,
+        [string]$DbPath,
+        [ValidateSet('form','report')][string]$ObjectType,
+        [string]$ObjectName,
+        $ControlType,
         [hashtable]$Properties = @{},
         [string]$ClassName,
         [switch]$AsJson
     )
+
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'New-AccessControl'
+    if (-not $ObjectType) { throw "New-AccessControl: -ObjectType is required (form, report)." }
+    if (-not $ObjectName) { throw "New-AccessControl: -ObjectName is required." }
+    if (-not $ControlType) { throw "New-AccessControl: -ControlType is required." }
 
     $app = Connect-AccessDB -DbPath $DbPath
 
@@ -414,12 +440,17 @@ function Remove-AccessControl {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][ValidateSet('form','report')][string]$ObjectType,
-        [Parameter(Mandatory)][string]$ObjectName,
-        [Parameter(Mandatory)][string]$ControlName,
+        [string]$DbPath,
+        [ValidateSet('form','report')][string]$ObjectType,
+        [string]$ObjectName,
+        [string]$ControlName,
         [switch]$AsJson
     )
+
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Remove-AccessControl'
+    if (-not $ObjectType) { throw "Remove-AccessControl: -ObjectType is required (form, report)." }
+    if (-not $ObjectName) { throw "Remove-AccessControl: -ObjectName is required." }
+    if (-not $ControlName) { throw "Remove-AccessControl: -ControlName is required." }
 
     $app = Connect-AccessDB -DbPath $DbPath
     Open-InDesignView -ObjectType $ObjectType -ObjectName $ObjectName
@@ -461,13 +492,19 @@ function Set-AccessControlProperty {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][ValidateSet('form','report')][string]$ObjectType,
-        [Parameter(Mandatory)][string]$ObjectName,
-        [Parameter(Mandatory)][string]$ControlName,
-        [Parameter(Mandatory)][hashtable]$Properties,
+        [string]$DbPath,
+        [ValidateSet('form','report')][string]$ObjectType,
+        [string]$ObjectName,
+        [string]$ControlName,
+        [hashtable]$Properties,
         [switch]$AsJson
     )
+
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Set-AccessControlProperty'
+    if (-not $ObjectType) { throw "Set-AccessControlProperty: -ObjectType is required (form, report)." }
+    if (-not $ObjectName) { throw "Set-AccessControlProperty: -ObjectName is required." }
+    if (-not $ControlName) { throw "Set-AccessControlProperty: -ControlName is required." }
+    if (-not $Properties -or $Properties.Count -eq 0) { throw "Set-AccessControlProperty: -Properties is required." }
 
     $null = Connect-AccessDB -DbPath $DbPath
     Open-InDesignView -ObjectType $ObjectType -ObjectName $ObjectName
@@ -519,12 +556,17 @@ function Set-AccessControlBatch {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][ValidateSet('form','report')][string]$ObjectType,
-        [Parameter(Mandatory)][string]$ObjectName,
-        [Parameter(Mandatory)][array]$Controls,
+        [string]$DbPath,
+        [ValidateSet('form','report')][string]$ObjectType,
+        [string]$ObjectName,
+        [array]$Controls,
         [switch]$AsJson
     )
+
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Set-AccessControlBatch'
+    if (-not $ObjectType) { throw "Set-AccessControlBatch: -ObjectType is required (form, report)." }
+    if (-not $ObjectName) { throw "Set-AccessControlBatch: -ObjectName is required." }
+    if (-not $Controls -or $Controls.Count -eq 0) { throw "Set-AccessControlBatch: -Controls is required." }
 
     if ($Controls.Count -eq 0) {
         return Format-AccessOutput -AsJson:$AsJson -Data ([ordered]@{ error = 'No controls provided.' })

@@ -8,7 +8,7 @@
     No MCP server needed — AI agents call functions directly via terminal.
 
     Usage:
-        Import-Module .\AccessPOSH\AccessPOSH.psd1 -Force
+        Import-Module .\AccessPOSH -Force
         Invoke-AccessSQL -DbPath "C:\my.accdb" -SQL "SELECT * FROM Users"
         Close-AccessDatabase                           # release COM
 

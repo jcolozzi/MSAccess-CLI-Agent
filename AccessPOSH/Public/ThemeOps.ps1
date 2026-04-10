@@ -10,11 +10,13 @@ function Get-AccessTheme {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][string]$ObjectName,
+        [string]$DbPath,
+        [string]$ObjectName,
         [ValidateSet('form','report')][string]$ObjectType = 'form',
         [switch]$AsJson
     )
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Get-AccessTheme'
+    if (-not $ObjectName) { throw "Get-AccessTheme: -ObjectName is required." }
     $app = Connect-AccessDB -DbPath $DbPath
 
     try {
@@ -53,12 +55,15 @@ function Set-AccessTheme {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
-        [Parameter(Mandatory)][string]$ObjectName,
-        [Parameter(Mandatory)][string]$ThemeName,
+        [string]$DbPath,
+        [string]$ObjectName,
+        [string]$ThemeName,
         [ValidateSet('form','report')][string]$ObjectType = 'form',
         [switch]$AsJson
     )
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Set-AccessTheme'
+    if (-not $ObjectName) { throw "Set-AccessTheme: -ObjectName is required." }
+    if (-not $ThemeName) { throw "Set-AccessTheme: -ThemeName is required." }
     $app = Connect-AccessDB -DbPath $DbPath
 
     try {
@@ -94,9 +99,10 @@ function Get-AccessThemeList {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)][string]$DbPath,
+        [string]$DbPath,
         [switch]$AsJson
     )
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Get-AccessThemeList'
     $app = Connect-AccessDB -DbPath $DbPath
 
     # Office themes are stored in the Document Themes folder
