@@ -1,10 +1,12 @@
 @{
-    RootModule        = 'AccessPOSH.psm1'
-    ModuleVersion     = '1.0.0'
-    GUID              = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
-    Author            = 'Access-POSH'
-    Description       = 'PowerShell Access Database Automation via COM — port of MCP-Access (91 tools)'
-    PowerShellVersion = '5.1'
+    RootModule           = 'AccessPOSH.psm1'
+    ModuleVersion        = '1.0.0'
+    CompatiblePSEditions = @('Desktop', 'Core')
+    GUID                 = '7f1d4798-d88f-4ad5-814e-3300dd53bf0b'
+    Author               = 'Access-POSH'
+    Copyright            = '(c) 2026 Access-POSH. All rights reserved.'
+    Description          = 'PowerShell Access Database Automation via COM — port of MCP-Access (91 tools)'
+    PowerShellVersion    = '5.1'
 
     FunctionsToExport = @(
         # Database
@@ -86,6 +88,8 @@
         # Export
         'Export-AccessReport'
         'Copy-AccessData'
+        'Export-AccessSource'
+        'Import-AccessSource'
 
         # UI Automation
         'Get-AccessScreenshot'
@@ -148,4 +152,13 @@
     CmdletsToExport   = @()
     VariablesToExport  = @()
     AliasesToExport    = @()
+
+    PrivateData = @{
+        PSData = @{
+            Tags         = @('Access', 'MicrosoftAccess', 'COM', 'DAO', 'Automation', 'Database', 'VBA', 'Windows')
+            ProjectUri   = ''
+            LicenseUri   = ''
+            ReleaseNotes = 'Initial release — COM automation wrapper for Microsoft Access.'
+        }
+    }
 }

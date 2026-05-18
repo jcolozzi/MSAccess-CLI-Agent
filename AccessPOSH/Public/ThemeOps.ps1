@@ -10,7 +10,9 @@ function Get-AccessTheme {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
+        [ValidateNotNullOrEmpty()]
         [string]$ObjectName,
         [ValidateSet('form','report')][string]$ObjectType = 'form',
         [switch]$AsJson
@@ -55,7 +57,9 @@ function Set-AccessTheme {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
+        [ValidateNotNullOrEmpty()]
         [string]$ObjectName,
         [string]$ThemeName,
         [ValidateSet('form','report')][string]$ObjectType = 'form',
@@ -99,6 +103,7 @@ function Get-AccessThemeList {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
         [switch]$AsJson
     )

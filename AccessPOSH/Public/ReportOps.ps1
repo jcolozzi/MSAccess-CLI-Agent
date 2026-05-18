@@ -11,6 +11,7 @@ function New-AccessReport {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
         [string]$ReportName,
         [string]$RecordSource,
@@ -59,6 +60,7 @@ function Get-AccessGroupLevel {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
         [string]$ReportName,
         [switch]$AsJson
@@ -118,6 +120,7 @@ function Set-AccessGroupLevel {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
         [string]$ReportName,
         [string]$Expression,
@@ -175,6 +178,7 @@ function Remove-AccessGroupLevel {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
         [string]$ReportName,
         [int]$LevelIndex,

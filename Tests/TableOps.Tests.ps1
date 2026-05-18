@@ -97,3 +97,48 @@ Describe 'Set-AccessIndex' {
         (Get-Command Set-AccessIndex).Parameters['Fields'] | Should -Not -BeNullOrEmpty
     }
 }
+
+Describe 'Edit-AccessTable — Parameter Validation' {
+    It 'throws when -TableName is omitted' {
+        { Edit-AccessTable -DbPath 'x:\fake.accdb' } | Should -Throw '*-TableName is required*'
+    }
+    It 'throws when -Action is omitted' {
+        { Edit-AccessTable -DbPath 'x:\fake.accdb' -TableName 'T' } | Should -Throw '*-Action is required*'
+    }
+    It 'throws when -FieldName is omitted' {
+        { Edit-AccessTable -DbPath 'x:\fake.accdb' -TableName 'T' -Action 'add_field' } | Should -Throw '*-FieldName is required*'
+    }
+}
+
+Describe 'Get-AccessFieldProperty — Parameter Validation' {
+    It 'throws when -TableName is omitted' {
+        { Get-AccessFieldProperty -DbPath 'x:\fake.accdb' } | Should -Throw '*-TableName is required*'
+    }
+    It 'throws when -FieldName is omitted' {
+        { Get-AccessFieldProperty -DbPath 'x:\fake.accdb' -TableName 'T' } | Should -Throw '*-FieldName is required*'
+    }
+}
+
+Describe 'Set-AccessFieldProperty — Parameter Validation' {
+    It 'throws when -TableName is omitted' {
+        { Set-AccessFieldProperty -DbPath 'x:\fake.accdb' } | Should -Throw '*-TableName is required*'
+    }
+    It 'throws when -FieldName is omitted' {
+        { Set-AccessFieldProperty -DbPath 'x:\fake.accdb' -TableName 'T' } | Should -Throw '*-FieldName is required*'
+    }
+    It 'throws when -PropertyName is omitted' {
+        { Set-AccessFieldProperty -DbPath 'x:\fake.accdb' -TableName 'T' -FieldName 'F' } | Should -Throw '*-PropertyName is required*'
+    }
+}
+
+Describe 'Set-AccessIndex — Parameter Validation' {
+    It 'throws when -TableName is omitted' {
+        { Set-AccessIndex -DbPath 'x:\fake.accdb' } | Should -Throw '*-TableName is required*'
+    }
+    It 'throws when -Action is omitted' {
+        { Set-AccessIndex -DbPath 'x:\fake.accdb' -TableName 'T' } | Should -Throw '*-Action is required*'
+    }
+    It 'throws when -IndexName is omitted' {
+        { Set-AccessIndex -DbPath 'x:\fake.accdb' -TableName 'T' -Action 'create' } | Should -Throw '*-IndexName is required*'
+    }
+}

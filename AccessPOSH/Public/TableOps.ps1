@@ -15,19 +15,37 @@ function Get-AccessTableInfo {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
+        [ValidateNotNullOrEmpty()]
         [string]$TableName,
         [switch]$AsJson
     )
     $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Get-AccessTableInfo'
-    if (-not $TableName) { throw "Get-AccessTableInfo: -TableName is required." }
+    if (-not $TableName) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-TableName is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $TableName
+            )
+        )
+    }
 
     $app = Connect-AccessDB -DbPath $DbPath
     $db  = $app.CurrentDb()
     try {
         $td = $db.TableDefs($TableName)
     } catch {
-        throw "Table '$TableName' not found: $_"
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.IO.FileNotFoundException]::new("Table '$TableName' not found: $_"),
+                'ObjectNotFound',
+                [System.Management.Automation.ErrorCategory]::ObjectNotFound,
+                $TableName
+            )
+        )
     }
 
     $isLinked = [bool]$td.Connect
@@ -93,16 +111,36 @@ function New-AccessTable {
         )
         New-AccessTable -DbPath "C:\db.accdb" -TableName "Users" -Fields $fields
     #>
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
+        [ValidateNotNullOrEmpty()]
         [string]$TableName,
         [object[]]$Fields,
         [switch]$AsJson
     )
     $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'New-AccessTable'
-    if (-not $TableName) { throw "New-AccessTable: -TableName is required." }
-    if (-not $Fields -or $Fields.Count -eq 0) { throw "New-AccessTable: -Fields is required." }
+    if (-not $TableName) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-TableName is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $TableName
+            )
+        )
+    }
+    if (-not $Fields -or $Fields.Count -eq 0) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-Fields is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $Fields
+            )
+        )
+    }
 
     $app = Connect-AccessDB -DbPath $DbPath
     $db  = $app.CurrentDb()
@@ -110,7 +148,14 @@ function New-AccessTable {
     # Check table doesn't exist
     $existing = for ($i = 0; $i -lt $db.TableDefs.Count; $i++) { $db.TableDefs($i).Name }
     if ($TableName -in $existing) {
-        throw "Table '$TableName' already exists."
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new("Table '$TableName' already exists."),
+                'ResourceAlreadyExists',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $TableName
+            )
+        )
     }
 
     $td = $db.CreateTableDef($TableName)
@@ -127,7 +172,14 @@ function New-AccessTable {
         $daoType = $script:FIELD_TYPE_MAP[$ftype]
         if ($null -eq $daoType) {
             $validTypes = ($script:FIELD_TYPE_MAP.Keys | Sort-Object -Unique) -join ', '
-            throw "Unknown field type: '$ftype'. Valid types: $validTypes"
+            $PSCmdlet.ThrowTerminatingError(
+                [System.Management.Automation.ErrorRecord]::new(
+                    [System.ArgumentException]::new("Unknown field type: '$ftype'. Valid types: $validTypes"),
+                    'InvalidArgument',
+                    [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                    $ftype
+                )
+            )
         }
 
         $isAuto = $ftype -in 'autonumber', 'autoincrement'
@@ -205,9 +257,11 @@ function Edit-AccessTable {
     .SYNOPSIS
         Add, delete, or rename fields in an existing table via DAO.
     #>
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
+        [ValidateNotNullOrEmpty()]
         [string]$TableName,
         [ValidateSet('add_field','delete_field','rename_field')][string]$Action,
         [string]$FieldName,
@@ -217,13 +271,39 @@ function Edit-AccessTable {
         [switch]$Required,
         $Default,
         [string]$Description,
-        [switch]$ConfirmDelete,
         [switch]$AsJson
     )
     $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Edit-AccessTable'
-    if (-not $TableName) { throw "Edit-AccessTable: -TableName is required." }
-    if (-not $Action) { throw "Edit-AccessTable: -Action is required (add_field, delete_field, rename_field)." }
-    if (-not $FieldName) { throw "Edit-AccessTable: -FieldName is required." }
+    if (-not $TableName) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-TableName is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $TableName
+            )
+        )
+    }
+    if (-not $Action) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-Action is required (add_field, delete_field, rename_field).'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $Action
+            )
+        )
+    }
+    if (-not $FieldName) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-FieldName is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $FieldName
+            )
+        )
+    }
 
     $app = Connect-AccessDB -DbPath $DbPath
     $db  = $app.CurrentDb()
@@ -235,7 +315,14 @@ function Edit-AccessTable {
             $daoType = $script:FIELD_TYPE_MAP[$ftype]
             if ($null -eq $daoType) {
                 $validTypes = ($script:FIELD_TYPE_MAP.Keys | Sort-Object -Unique) -join ', '
-                throw "Unknown type: '$ftype'. Valid: $validTypes"
+                $PSCmdlet.ThrowTerminatingError(
+                    [System.Management.Automation.ErrorRecord]::new(
+                        [System.ArgumentException]::new("Unknown type: '$ftype'. Valid: $validTypes"),
+                        'InvalidArgument',
+                        [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                        $ftype
+                    )
+                )
             }
             $isAuto = $ftype -in 'autonumber', 'autoincrement'
 
@@ -265,16 +352,23 @@ function Edit-AccessTable {
             $result = [ordered]@{ action = 'field_added'; table = $TableName; field = $FieldName; type = $ftype }
         }
         'delete_field' {
-            if (-not $ConfirmDelete) {
-                $result = [ordered]@{ error = "Deleting field '$FieldName' from '$TableName' is destructive. Use -ConfirmDelete to confirm." }
-            } else {
+            if ($PSCmdlet.ShouldProcess("field '$FieldName' in table '$TableName'", 'Delete field')) {
                 $td.Fields.Delete($FieldName)
                 $result = [ordered]@{ action = 'field_deleted'; table = $TableName; field = $FieldName }
+            } else {
+                $result = [ordered]@{ action = 'skipped'; reason = 'Declined by ShouldProcess (-WhatIf or -Confirm:$false)' }
             }
         }
         'rename_field' {
             if ([string]::IsNullOrEmpty($NewName)) {
-                throw "rename_field requires -NewName"
+                $PSCmdlet.ThrowTerminatingError(
+                    [System.Management.Automation.ErrorRecord]::new(
+                        [System.ArgumentException]::new('rename_field requires -NewName'),
+                        'MissingRequiredParameter',
+                        [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                        $NewName
+                    )
+                )
             }
             $fld = $td.Fields($FieldName)
             $fld.Name = $NewName
@@ -292,14 +386,34 @@ function Get-AccessFieldProperty {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
+        [ValidateNotNullOrEmpty()]
         [string]$TableName,
         [string]$FieldName,
         [switch]$AsJson
     )
     $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Get-AccessFieldProperty'
-    if (-not $TableName) { throw "Get-AccessFieldProperty: -TableName is required." }
-    if (-not $FieldName) { throw "Get-AccessFieldProperty: -FieldName is required." }
+    if (-not $TableName) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-TableName is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $TableName
+            )
+        )
+    }
+    if (-not $FieldName) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-FieldName is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $FieldName
+            )
+        )
+    }
 
     $app = Connect-AccessDB -DbPath $DbPath
     $db  = $app.CurrentDb()
@@ -334,7 +448,9 @@ function Set-AccessFieldProperty {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
+        [ValidateNotNullOrEmpty()]
         [string]$TableName,
         [string]$FieldName,
         [string]$PropertyName,
@@ -342,10 +458,46 @@ function Set-AccessFieldProperty {
         [switch]$AsJson
     )
     $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Set-AccessFieldProperty'
-    if (-not $TableName) { throw "Set-AccessFieldProperty: -TableName is required." }
-    if (-not $FieldName) { throw "Set-AccessFieldProperty: -FieldName is required." }
-    if (-not $PropertyName) { throw "Set-AccessFieldProperty: -PropertyName is required." }
-    if (-not $Value) { throw "Set-AccessFieldProperty: -Value is required." }
+    if (-not $TableName) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-TableName is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $TableName
+            )
+        )
+    }
+    if (-not $FieldName) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-FieldName is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $FieldName
+            )
+        )
+    }
+    if (-not $PropertyName) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-PropertyName is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $PropertyName
+            )
+        )
+    }
+    if (-not $Value) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-Value is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $Value
+            )
+        )
+    }
 
     $app     = Connect-AccessDB -DbPath $DbPath
     $db      = $app.CurrentDb()
@@ -384,12 +536,23 @@ function Get-AccessIndex {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
+        [ValidateNotNullOrEmpty()]
         [string]$TableName,
         [switch]$AsJson
     )
     $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Get-AccessIndex'
-    if (-not $TableName) { throw "Get-AccessIndex: -TableName is required." }
+    if (-not $TableName) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-TableName is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $TableName
+            )
+        )
+    }
 
     $app = Connect-AccessDB -DbPath $DbPath
     $db  = $app.CurrentDb()
@@ -432,7 +595,9 @@ function Set-AccessIndex {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
+        [ValidateNotNullOrEmpty()]
         [string]$TableName,
         [ValidateSet('create','delete')][string]$Action,
         [string]$IndexName,
@@ -442,9 +607,36 @@ function Set-AccessIndex {
         [switch]$AsJson
     )
     $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Set-AccessIndex'
-    if (-not $TableName) { throw "Set-AccessIndex: -TableName is required." }
-    if (-not $Action) { throw "Set-AccessIndex: -Action is required (create, delete)." }
-    if (-not $IndexName) { throw "Set-AccessIndex: -IndexName is required." }
+    if (-not $TableName) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-TableName is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $TableName
+            )
+        )
+    }
+    if (-not $Action) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-Action is required (create, delete).'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $Action
+            )
+        )
+    }
+    if (-not $IndexName) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-IndexName is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $IndexName
+            )
+        )
+    }
 
     $app = Connect-AccessDB -DbPath $DbPath
     $db  = $app.CurrentDb()
@@ -452,7 +644,16 @@ function Set-AccessIndex {
 
     switch ($Action) {
         'create' {
-            if (-not $Fields -or $Fields.Count -eq 0) { throw "create requires -Fields" }
+            if (-not $Fields -or $Fields.Count -eq 0) {
+                $PSCmdlet.ThrowTerminatingError(
+                    [System.Management.Automation.ErrorRecord]::new(
+                        [System.ArgumentException]::new('create requires -Fields'),
+                        'MissingRequiredParameter',
+                        [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                        $Fields
+                    )
+                )
+            }
             $idx = $td.CreateIndex($IndexName)
             $idx.Primary = [bool]$Primary
             $idx.Unique  = [bool]$Unique

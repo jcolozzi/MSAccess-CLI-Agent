@@ -11,6 +11,7 @@ function Export-AccessFilteredReport {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
         [string]$ReportName,
         [string]$WhereCondition,
@@ -86,6 +87,7 @@ function Send-AccessReportToPrinter {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
         [string]$ReportName,
         [string]$WhereCondition,

@@ -68,17 +68,34 @@ function New-AccessDatabase {
     .EXAMPLE
         New-AccessDatabase -DbPath "C:\Data\new.accdb"
     #>
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
         [switch]$AsJson
     )
 
-    if (-not $DbPath) { throw "New-AccessDatabase: -DbPath is required." }
+    if (-not $DbPath) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-DbPath is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $DbPath
+            )
+        )
+    }
 
     $resolved = [System.IO.Path]::GetFullPath($DbPath)
     if (Test-Path -LiteralPath $resolved) {
-        throw "File already exists: $resolved. Use Invoke-AccessSQL to modify it."
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new("File already exists: $resolved. Use Invoke-AccessSQL to modify it."),
+                'ResourceAlreadyExists',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $resolved
+            )
+        )
     }
 
     # Ensure Access is running
@@ -86,7 +103,14 @@ function New-AccessDatabase {
         try {
             $script:AccessSession.App = New-Object -ComObject 'Access.Application'
         } catch {
-            throw "Failed to create Access.Application COM object. Is Microsoft Access installed? Error: $_"
+            $PSCmdlet.ThrowTerminatingError(
+                [System.Management.Automation.ErrorRecord]::new(
+                    [System.InvalidOperationException]::new("Failed to create Access.Application COM object. Is Microsoft Access installed? Error: $_"),
+                    'OperationFailed',
+                    [System.Management.Automation.ErrorCategory]::InvalidOperation,
+                    $null
+                )
+            )
         }
         # Suppress dialogs for non-interactive automation
         try {
@@ -106,7 +130,14 @@ function New-AccessDatabase {
     try {
         $app.NewCurrentDatabase($resolved)
     } catch {
-        throw "Error creating database: $_"
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.InvalidOperationException]::new("Error creating database: $_"),
+                'OperationFailed',
+                [System.Management.Automation.ErrorCategory]::InvalidOperation,
+                $resolved
+            )
+        )
     }
 
     # Close and reopen to ensure CurrentDb() works reliably
@@ -141,13 +172,23 @@ function Repair-AccessDatabase {
     .EXAMPLE
         Repair-AccessDatabase -DbPath "C:\Data\mydb.accdb"
     #>
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
         [switch]$AsJson
     )
 
-    if (-not $DbPath) { throw "Repair-AccessDatabase: -DbPath is required." }
+    if (-not $DbPath) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-DbPath is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $DbPath
+            )
+        )
+    }
 
     $resolved = [System.IO.Path]::GetFullPath($DbPath)
     $app = Connect-AccessDB -DbPath $resolved
@@ -158,7 +199,14 @@ function Repair-AccessDatabase {
     try {
         $app.CloseCurrentDatabase()
     } catch {
-        throw "Could not close database for compact/repair: $_"
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.InvalidOperationException]::new("Could not close database for compact/repair: $_"),
+                'OperationFailed',
+                [System.Management.Automation.ErrorCategory]::InvalidOperation,
+                $resolved
+            )
+        )
     }
     $script:AccessSession.DbPath = $null
     Clear-AccessCaches
@@ -180,11 +228,25 @@ function Repair-AccessDatabase {
             $app.CompactRepair($resolved, $tmpPath)
         } catch {
             if (Test-Path -LiteralPath $tmpPath) { Remove-Item -LiteralPath $tmpPath -Force }
-            throw "CompactRepair failed: $_"
+            $PSCmdlet.ThrowTerminatingError(
+                [System.Management.Automation.ErrorRecord]::new(
+                    [System.InvalidOperationException]::new("CompactRepair failed: $_"),
+                    'OperationFailed',
+                    [System.Management.Automation.ErrorCategory]::InvalidOperation,
+                    $resolved
+                )
+            )
         }
 
         if (-not (Test-Path -LiteralPath $tmpPath)) {
-            throw 'CompactRepair did not produce output file'
+            $PSCmdlet.ThrowTerminatingError(
+                [System.Management.Automation.ErrorRecord]::new(
+                    [System.InvalidOperationException]::new('CompactRepair did not produce output file'),
+                    'OperationFailed',
+                    [System.Management.Automation.ErrorCategory]::InvalidOperation,
+                    $tmpPath
+                )
+            )
         }
         $compactedSize = (Get-Item -LiteralPath $tmpPath).Length
 
@@ -212,7 +274,14 @@ function Repair-AccessDatabase {
         $app.OpenCurrentDatabase($resolved)
         $script:AccessSession.DbPath = $resolved
     } catch {
-        throw "Database compacted OK but failed to reopen: $_"
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.InvalidOperationException]::new("Database compacted OK but failed to reopen: $_"),
+                'OperationFailed',
+                [System.Management.Automation.ErrorCategory]::InvalidOperation,
+                $resolved
+            )
+        )
     }
 
     $saved = $originalSize - $compactedSize
@@ -240,17 +309,34 @@ function Invoke-AccessDecompile {
     .EXAMPLE
         Invoke-AccessDecompile -DbPath "C:\Data\mydb.accdb"
     #>
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
         [switch]$AsJson
     )
 
-    if (-not $DbPath) { throw "Invoke-AccessDecompile: -DbPath is required." }
+    if (-not $DbPath) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-DbPath is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $DbPath
+            )
+        )
+    }
 
     $resolved = [System.IO.Path]::GetFullPath($DbPath)
     if (-not (Test-Path -LiteralPath $resolved -PathType Leaf)) {
-        throw "Database not found: $resolved"
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.IO.FileNotFoundException]::new("Database not found: $resolved"),
+                'ObjectNotFound',
+                [System.Management.Automation.ErrorCategory]::ObjectNotFound,
+                $resolved
+            )
+        )
     }
     $originalSize = (Get-Item -LiteralPath $resolved).Length
 
@@ -284,7 +370,14 @@ function Invoke-AccessDecompile {
     )
     $msaccess = $msaccessCandidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
     if (-not $msaccess) {
-        throw 'MSACCESS.EXE not found in known Office 16 paths'
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.IO.FileNotFoundException]::new('MSACCESS.EXE not found in known Office 16 paths'),
+                'ObjectNotFound',
+                [System.Management.Automation.ErrorCategory]::ObjectNotFound,
+                $msaccessCandidates
+            )
+        )
     }
 
     # 3. Launch MSACCESS /decompile with SHIFT held
@@ -309,7 +402,14 @@ function Invoke-AccessDecompile {
         if ($shiftHeld) {
             try { [AccessPoshNative]::keybd_event($VK_SHIFT, 0, $KEYEVENTF_KEYUP, [UIntPtr]::Zero) } catch {}
         }
-        throw "Failed to launch MSACCESS /decompile: $_"
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.InvalidOperationException]::new("Failed to launch MSACCESS /decompile: $_"),
+                'OperationFailed',
+                [System.Management.Automation.ErrorCategory]::InvalidOperation,
+                $msaccess
+            )
+        )
     }
 
     Start-Sleep -Seconds 3
@@ -332,7 +432,14 @@ function Invoke-AccessDecompile {
     try {
         $script:AccessSession.App = New-Object -ComObject 'Access.Application'
     } catch {
-        throw "Failed to relaunch Access COM after decompile: $_"
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.InvalidOperationException]::new("Failed to relaunch Access COM after decompile: $_"),
+                'OperationFailed',
+                [System.Management.Automation.ErrorCategory]::InvalidOperation,
+                $null
+            )
+        )
     }
     # Suppress dialogs for non-interactive automation
     try {
@@ -347,7 +454,14 @@ function Invoke-AccessDecompile {
         if ($_.Exception.Message -match 'already have the database open') {
             Write-Verbose 'DB was already open — syncing state'
         } else {
-            throw "Failed to reopen DB after decompile: $_"
+            $PSCmdlet.ThrowTerminatingError(
+                [System.Management.Automation.ErrorRecord]::new(
+                    [System.InvalidOperationException]::new("Failed to reopen DB after decompile: $_"),
+                    'OperationFailed',
+                    [System.Management.Automation.ErrorCategory]::InvalidOperation,
+                    $resolved
+                )
+            )
         }
     }
     $script:AccessSession.DbPath = $resolved
@@ -382,11 +496,25 @@ function Invoke-AccessDecompile {
         $script:AccessSession.App.CompactRepair($resolved, $tmpPath)
     } catch {
         if (Test-Path -LiteralPath $tmpPath) { Remove-Item -LiteralPath $tmpPath -Force }
-        throw "CompactRepair after decompile failed: $_"
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.InvalidOperationException]::new("CompactRepair after decompile failed: $_"),
+                'OperationFailed',
+                [System.Management.Automation.ErrorCategory]::InvalidOperation,
+                $resolved
+            )
+        )
     }
 
     if (-not (Test-Path -LiteralPath $tmpPath)) {
-        throw 'CompactRepair did not produce output file'
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.InvalidOperationException]::new('CompactRepair did not produce output file'),
+                'OperationFailed',
+                [System.Management.Automation.ErrorCategory]::InvalidOperation,
+                $tmpPath
+            )
+        )
     }
     $compactedSize = (Get-Item -LiteralPath $tmpPath).Length
 
@@ -407,7 +535,14 @@ function Invoke-AccessDecompile {
         if ($_.Exception.Message -match 'already have the database open') {
             $script:AccessSession.DbPath = $resolved
         } else {
-            throw "Decompile+compact OK but failed to reopen: $_"
+            $PSCmdlet.ThrowTerminatingError(
+                [System.Management.Automation.ErrorRecord]::new(
+                    [System.InvalidOperationException]::new("Decompile+compact OK but failed to reopen: $_"),
+                    'OperationFailed',
+                    [System.Management.Automation.ErrorCategory]::InvalidOperation,
+                    $resolved
+                )
+            )
         }
     }
 
@@ -440,6 +575,7 @@ function Get-AccessObject {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
         [ValidateSet('all','table','query','form','report','macro','module')]
         [string]$ObjectType = 'all',
@@ -490,15 +626,36 @@ function Get-AccessCode {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
+        [ValidateNotNullOrEmpty()]
         [ValidateSet('query','form','report','macro','module')]
         [string]$ObjectType,
+        [ValidateNotNullOrEmpty()]
         [string]$Name
     )
 
     $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Get-AccessCode'
-    if (-not $ObjectType) { throw "Get-AccessCode: -ObjectType is required (query, form, report, macro, module)." }
-    if (-not $Name) { throw "Get-AccessCode: -Name is required." }
+    if (-not $ObjectType) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-ObjectType is required (query, form, report, macro, module).'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $ObjectType
+            )
+        )
+    }
+    if (-not $Name) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-Name is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $Name
+            )
+        )
+    }
 
     $app = Connect-AccessDB -DbPath $DbPath
     $tmp = [System.IO.Path]::GetTempFileName()
@@ -536,20 +693,50 @@ function Set-AccessCode {
         $code = Get-AccessCode -DbPath "C:\db.accdb" -ObjectType module -Name "Module1"
         Set-AccessCode -DbPath "C:\db.accdb" -ObjectType module -Name "Module1" -Code $code
     #>
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
+        [ValidateNotNullOrEmpty()]
         [ValidateSet('query','form','report','macro','module')]
         [string]$ObjectType,
+        [ValidateNotNullOrEmpty()]
         [string]$Name,
         [string]$Code,
         [switch]$AsJson
     )
 
     $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Set-AccessCode'
-    if (-not $ObjectType) { throw "Set-AccessCode: -ObjectType is required (query, form, report, macro, module)." }
-    if (-not $Name) { throw "Set-AccessCode: -Name is required." }
-    if (-not $Code) { throw "Set-AccessCode: -Code is required." }
+    if (-not $ObjectType) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-ObjectType is required (query, form, report, macro, module).'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $ObjectType
+            )
+        )
+    }
+    if (-not $Name) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-Name is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $Name
+            )
+        )
+    }
+    if (-not $Code) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-Code is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $Code
+            )
+        )
+    }
 
     $app = Connect-AccessDB -DbPath $DbPath
 
@@ -634,44 +821,68 @@ function Remove-AccessObject {
         Type of object: query, form, report, macro, module.
     .PARAMETER Name
         Name of the object to delete.
-    .PARAMETER Confirm
-        Must be specified to confirm destructive operation.
     .PARAMETER AsJson
         Return JSON string instead of PSCustomObject.
     .EXAMPLE
-        Remove-AccessObject -DbPath "C:\db.accdb" -ObjectType module -Name "Module1" -Confirm
+        Remove-AccessObject -DbPath "C:\db.accdb" -ObjectType module -Name "Module1"
+        Remove-AccessObject -DbPath "C:\db.accdb" -ObjectType form -Name "frmMain" -WhatIf
     #>
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
+        [ValidateNotNullOrEmpty()]
         [ValidateSet('query','form','report','macro','module')]
         [string]$ObjectType,
+        [ValidateNotNullOrEmpty()]
         [string]$Name,
-        [switch]$Confirm,
         [switch]$AsJson
     )
 
     $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Remove-AccessObject'
-    if (-not $ObjectType) { throw "Remove-AccessObject: -ObjectType is required (query, form, report, macro, module)." }
-    if (-not $Name) { throw "Remove-AccessObject: -Name is required." }
-
-    if (-not $Confirm) {
-        throw "Destructive operation: -Confirm is required to delete an object."
+    if (-not $ObjectType) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-ObjectType is required (query, form, report, macro, module).'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $ObjectType
+            )
+        )
+    }
+    if (-not $Name) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-Name is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $Name
+            )
+        )
     }
 
     $app = Connect-AccessDB -DbPath $DbPath
-    try {
-        $app.DoCmd.DeleteObject($script:AC_TYPE[$ObjectType], $Name)
-    } catch {
-        throw "Error deleting $ObjectType '$Name': $_"
-    } finally {
-        Clear-AccessCaches
-    }
+    if ($PSCmdlet.ShouldProcess("$ObjectType '$Name'", 'Remove Access object')) {
+        try {
+            $app.DoCmd.DeleteObject($script:AC_TYPE[$ObjectType], $Name)
+        } catch {
+            $PSCmdlet.ThrowTerminatingError(
+                [System.Management.Automation.ErrorRecord]::new(
+                    [System.InvalidOperationException]::new("Error deleting $ObjectType '$Name': $_"),
+                    'OperationFailed',
+                    [System.Management.Automation.ErrorCategory]::InvalidOperation,
+                    $Name
+                )
+            )
+        } finally {
+            Clear-AccessCaches
+        }
 
-    Format-AccessOutput -AsJson:$AsJson -Data @{
-        action      = 'deleted'
-        object_type = $ObjectType
-        object_name = $Name
+        Format-AccessOutput -AsJson:$AsJson -Data @{
+            action      = 'deleted'
+            object_type = $ObjectType
+            object_name = $Name
+        }
     }
 }
 
@@ -691,6 +902,7 @@ function Export-AccessStructure {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
         [string]$OutputPath,
         [switch]$AsJson
@@ -814,7 +1026,9 @@ function Invoke-AccessSQL {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
+        [ValidateNotNullOrEmpty()]
         [string]$SQL,
         [int]$Limit = 500,
         [switch]$ConfirmDestructive,
@@ -822,76 +1036,93 @@ function Invoke-AccessSQL {
     )
 
     $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Invoke-AccessSQL'
-    if (-not $SQL) { throw "Invoke-AccessSQL: -SQL is required." }
+    if (-not $SQL) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-SQL is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $SQL
+            )
+        )
+    }
 
     $app = Connect-AccessDB -DbPath $DbPath
     $db  = $app.CurrentDb()
     $normalized = $SQL.Trim().ToUpper()
 
-    if ($normalized.StartsWith('SELECT')) {
-        $Limit = [math]::Max(1, [math]::Min($Limit, 10000))
-        $rs = $null
-        try {
-            $rs = $db.OpenRecordset($SQL)
-        } catch {
-            $firstErr = $_
+    try {
+        if ($normalized.StartsWith('SELECT')) {
+            $Limit = [math]::Max(1, [math]::Min($Limit, 10000))
+            $rs = $null
             try {
-                $rs = $db.OpenRecordset($SQL, 2, $script:DB_SEE_CHANGES)
+                $rs = $db.OpenRecordset($SQL)
             } catch {
-                throw $firstErr
-            }
-        }
-
-        $fieldCount = $rs.Fields.Count
-        [string[]]$fieldNames = for ($i = 0; $i -lt $fieldCount; $i++) { $rs.Fields($i).Name }
-        $rows = [System.Collections.Generic.List[object]]::new()
-        $truncated = $false
-
-        if (-not $rs.EOF) {
-            $rs.MoveFirst()
-            while (-not $rs.EOF -and $rows.Count -lt $Limit) {
-                $row = [ordered]@{}
-                for ($i = 0; $i -lt $fieldCount; $i++) {
-                    $row[$fieldNames[$i]] = ConvertTo-SafeValue -Value $rs.Fields($i).Value
+                $firstErr = $_
+                try {
+                    $rs = $db.OpenRecordset($SQL, 2, $script:DB_SEE_CHANGES)
+                } catch {
+                    throw $firstErr
                 }
-                $rows.Add([PSCustomObject]$row)
-                $rs.MoveNext()
             }
-            $truncated = -not $rs.EOF
-        }
-        $rs.Close()
 
-        $result = [ordered]@{
-            rows  = @($rows)
-            count = $rows.Count
-        }
-        if ($truncated) { $result['truncated'] = $true }
+            $fieldCount = $rs.Fields.Count
+            [string[]]$fieldNames = for ($i = 0; $i -lt $fieldCount; $i++) { $rs.Fields($i).Name }
+            $rows = [System.Collections.Generic.List[object]]::new()
+            $truncated = $false
 
-        Format-AccessOutput -AsJson:$AsJson -Data $result
-    }
-    else {
-        foreach ($prefix in $script:DESTRUCTIVE_PREFIXES) {
-            if ($normalized.StartsWith($prefix)) {
-                if (-not $ConfirmDestructive) {
-                    $msg = "Destructive SQL detected. Use -ConfirmDestructive to execute: $($SQL.Substring(0, [math]::Min(100, $SQL.Length)))"
-                    return Format-AccessOutput -AsJson:$AsJson -Data @{ error = $msg }
-                }
-                break
-            }
-        }
-
-        try {
-            $db.Execute($SQL)
-        } catch {
-            $firstErr = $_
             try {
-                $db.Execute($SQL, $script:DB_SEE_CHANGES)
-            } catch {
-                throw $firstErr
+                if (-not $rs.EOF) {
+                    $rs.MoveFirst()
+                    while (-not $rs.EOF -and $rows.Count -lt $Limit) {
+                        $row = [ordered]@{}
+                        for ($i = 0; $i -lt $fieldCount; $i++) {
+                            $row[$fieldNames[$i]] = ConvertTo-SafeValue -Value $rs.Fields($i).Value
+                        }
+                        $rows.Add([PSCustomObject]$row)
+                        $rs.MoveNext()
+                    }
+                    $truncated = -not $rs.EOF
+                }
+            } finally {
+                try { $rs.Close() } catch {}
+                [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($rs)
             }
-        }
 
-        Format-AccessOutput -AsJson:$AsJson -Data @{ affected_rows = $db.RecordsAffected }
+            $result = [ordered]@{
+                rows  = @($rows)
+                count = $rows.Count
+            }
+            if ($truncated) { $result['truncated'] = $true }
+
+            Format-AccessOutput -AsJson:$AsJson -Data $result
+        }
+        else {
+            foreach ($prefix in $script:DESTRUCTIVE_PREFIXES) {
+                if ($normalized.StartsWith($prefix)) {
+                    if (-not $ConfirmDestructive) {
+                        $msg = "Destructive SQL detected. Use -ConfirmDestructive to execute: $($SQL.Substring(0, [math]::Min(100, $SQL.Length)))"
+                        return Format-AccessOutput -AsJson:$AsJson -Data @{ error = $msg }
+                    }
+                    break
+                }
+            }
+
+            try {
+                $db.Execute($SQL)
+            } catch {
+                $firstErr = $_
+                try {
+                    $db.Execute($SQL, $script:DB_SEE_CHANGES)
+                } catch {
+                    throw $firstErr
+                }
+            }
+
+            Format-AccessOutput -AsJson:$AsJson -Data @{ affected_rows = $db.RecordsAffected }
+        }
+    } finally {
+        [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($db)
     }
 }
 
@@ -918,6 +1149,7 @@ function Invoke-AccessSQLBatch {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
         [object[]]$Statements,
         [bool]$StopOnError = $true,
@@ -926,7 +1158,16 @@ function Invoke-AccessSQLBatch {
     )
 
     $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Invoke-AccessSQLBatch'
-    if (-not $Statements -or $Statements.Count -eq 0) { throw "Invoke-AccessSQLBatch: -Statements is required." }
+    if (-not $Statements -or $Statements.Count -eq 0) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-Statements is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $Statements
+            )
+        )
+    }
 
     if ($Statements.Count -eq 0) {
         return Format-AccessOutput -AsJson:$AsJson -Data @{ error = 'No SQL statements provided.' }
@@ -935,6 +1176,7 @@ function Invoke-AccessSQLBatch {
     $app = Connect-AccessDB -DbPath $DbPath
     $db  = $app.CurrentDb()
 
+    try {
     if (-not $ConfirmDestructive) {
         for ($i = 0; $i -lt $Statements.Count; $i++) {
             $sqlUpper = $Statements[$i].sql.Trim().ToUpper()
@@ -979,19 +1221,23 @@ function Invoke-AccessSQLBatch {
                 $rows = [System.Collections.Generic.List[object]]::new()
                 $selectLimit = 100
 
-                if (-not $rs.EOF) {
-                    $rs.MoveFirst()
-                    while (-not $rs.EOF -and $rows.Count -lt $selectLimit) {
-                        $row = [ordered]@{}
-                        for ($j = 0; $j -lt $fieldCount; $j++) {
-                            $row[$fieldNames[$j]] = ConvertTo-SafeValue -Value $rs.Fields($j).Value
+                try {
+                    if (-not $rs.EOF) {
+                        $rs.MoveFirst()
+                        while (-not $rs.EOF -and $rows.Count -lt $selectLimit) {
+                            $row = [ordered]@{}
+                            for ($j = 0; $j -lt $fieldCount; $j++) {
+                                $row[$fieldNames[$j]] = ConvertTo-SafeValue -Value $rs.Fields($j).Value
+                            }
+                            $rows.Add([PSCustomObject]$row)
+                            $rs.MoveNext()
                         }
-                        $rows.Add([PSCustomObject]$row)
-                        $rs.MoveNext()
+                        $truncated = -not $rs.EOF
                     }
-                    $truncated = -not $rs.EOF
+                } finally {
+                    try { $rs.Close() } catch {}
+                    [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($rs)
                 }
-                $rs.Close()
 
                 $entry['status'] = 'ok'
                 $entry['rows']   = @($rows)
@@ -1039,4 +1285,7 @@ function Invoke-AccessSQLBatch {
         failed    = $failed
         results   = @($results)
     })
+    } finally {
+        [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($db)
+    }
 }

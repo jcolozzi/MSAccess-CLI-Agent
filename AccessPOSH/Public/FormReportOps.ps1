@@ -20,6 +20,7 @@ function New-AccessForm {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
         [string]$FormName,
         [switch]$HasHeader,
@@ -93,8 +94,11 @@ function Get-AccessFormProperty {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
+        [ValidateNotNullOrEmpty()]
         [ValidateSet('form','report')][string]$ObjectType,
+        [ValidateNotNullOrEmpty()]
         [string]$ObjectName,
         [string[]]$PropertyNames,
         [switch]$AsJson
@@ -173,8 +177,11 @@ function Set-AccessFormProperty {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
+        [ValidateNotNullOrEmpty()]
         [ValidateSet('form','report')][string]$ObjectType,
+        [ValidateNotNullOrEmpty()]
         [string]$ObjectName,
         [hashtable]$Properties,
         [switch]$AsJson
@@ -231,8 +238,11 @@ function Get-AccessControl {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
+        [ValidateNotNullOrEmpty()]
         [ValidateSet('form','report')][string]$ObjectType,
+        [ValidateNotNullOrEmpty()]
         [string]$ObjectName,
         [switch]$AsJson
     )
@@ -279,8 +289,11 @@ function Get-AccessControlDetail {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
+        [ValidateNotNullOrEmpty()]
         [ValidateSet('form','report')][string]$ObjectType,
+        [ValidateNotNullOrEmpty()]
         [string]$ObjectName,
         [string]$ControlName,
         [switch]$AsJson
@@ -327,8 +340,11 @@ function New-AccessControl {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
+        [ValidateNotNullOrEmpty()]
         [ValidateSet('form','report')][string]$ObjectType,
+        [ValidateNotNullOrEmpty()]
         [string]$ObjectName,
         $ControlType,
         [hashtable]$Properties = @{},
@@ -440,8 +456,11 @@ function Remove-AccessControl {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
+        [ValidateNotNullOrEmpty()]
         [ValidateSet('form','report')][string]$ObjectType,
+        [ValidateNotNullOrEmpty()]
         [string]$ObjectName,
         [string]$ControlName,
         [switch]$AsJson
@@ -492,8 +511,11 @@ function Set-AccessControlProperty {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
+        [ValidateNotNullOrEmpty()]
         [ValidateSet('form','report')][string]$ObjectType,
+        [ValidateNotNullOrEmpty()]
         [string]$ObjectName,
         [string]$ControlName,
         [hashtable]$Properties,
@@ -556,8 +578,11 @@ function Set-AccessControlBatch {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
+        [ValidateNotNullOrEmpty()]
         [ValidateSet('form','report')][string]$ObjectType,
+        [ValidateNotNullOrEmpty()]
         [string]$ObjectName,
         [array]$Controls,
         [switch]$AsJson

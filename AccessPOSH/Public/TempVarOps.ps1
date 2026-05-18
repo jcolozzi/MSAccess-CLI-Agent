@@ -7,6 +7,7 @@ function Get-AccessTempVar {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
         [string]$Name,
         [switch]$AsJson
@@ -41,7 +42,9 @@ function Set-AccessTempVar {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
+        [ValidateNotNullOrEmpty()]
         [string]$Name,
         [object]$Value,
         [switch]$AsJson
@@ -64,6 +67,7 @@ function Remove-AccessTempVar {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
         [string]$Name,
         [switch]$AsJson

@@ -7,6 +7,7 @@ function Get-AccessLinkedTable {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
         [switch]$AsJson
     )
@@ -16,20 +17,31 @@ function Get-AccessLinkedTable {
     $db  = $app.CurrentDb()
 
     $linked = [System.Collections.Generic.List[object]]::new()
-    for ($i = 0; $i -lt $db.TableDefs.Count; $i++) {
-        $td   = $db.TableDefs($i)
-        $conn = $td.Connect
-        if ([string]::IsNullOrEmpty($conn)) { continue }
+    try {
+        for ($i = 0; $i -lt $db.TableDefs.Count; $i++) {
+            $td   = $db.TableDefs($i)
+            $conn = $td.Connect
+            if ([string]::IsNullOrEmpty($conn)) {
+                [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($td)
+                continue
+            }
 
-        $name = $td.Name
-        if ($name.StartsWith('~') -or $name.StartsWith('MSys')) { continue }
+            $name = $td.Name
+            if ($name.StartsWith('~') -or $name.StartsWith('MSys')) {
+                [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($td)
+                continue
+            }
 
-        $linked.Add([PSCustomObject][ordered]@{
-            name           = $name
-            source_table   = $td.SourceTableName
-            connect_string = $conn
-            is_odbc        = $conn.ToUpper().StartsWith('ODBC;')
-        })
+            $linked.Add([PSCustomObject][ordered]@{
+                name           = $name
+                source_table   = $td.SourceTableName
+                connect_string = $conn
+                is_odbc        = $conn.ToUpper().StartsWith('ODBC;')
+            })
+            [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($td)
+        }
+    } finally {
+        [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($db)
     }
 
     $result = [ordered]@{
@@ -44,9 +56,11 @@ function Set-AccessLinkedTable {
     .SYNOPSIS
         Relink a linked table (or all tables sharing the same connection) to a new data source.
     #>
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
+        [ValidateNotNullOrEmpty()]
         [string]$TableName,
         [string]$NewConnect,
         [switch]$RelinkAll,
@@ -54,15 +68,40 @@ function Set-AccessLinkedTable {
     )
 
     $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Set-AccessLinkedTable'
-    if (-not $TableName) { throw "Set-AccessLinkedTable: -TableName is required." }
-    if (-not $NewConnect) { throw "Set-AccessLinkedTable: -NewConnect is required." }
+    if (-not $TableName) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-TableName is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $TableName
+            )
+        )
+    }
+    if (-not $NewConnect) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-NewConnect is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $NewConnect
+            )
+        )
+    }
     $app = Connect-AccessDB -DbPath $DbPath
     $db  = $app.CurrentDb()
 
     # Verify the reference table is actually linked
     $refTd = $db.TableDefs($TableName)
     if ([string]::IsNullOrEmpty($refTd.Connect)) {
-        throw "'$TableName' is not a linked table."
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new("'$TableName' is not a linked table."),
+                'InvalidArgument',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $TableName
+            )
+        )
     }
 
     $relinked = [System.Collections.Generic.List[object]]::new()
@@ -109,6 +148,7 @@ function Get-AccessRelationship {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
         [switch]$AsJson
     )
@@ -156,9 +196,11 @@ function New-AccessRelationship {
     .SYNOPSIS
         Create a new relationship between two tables.
     #>
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
+        [ValidateNotNullOrEmpty()]
         [string]$Name,
         [string]$Table,
         [string]$ForeignTable,
@@ -168,25 +210,76 @@ function New-AccessRelationship {
     )
 
     $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'New-AccessRelationship'
-    if (-not $Name) { throw "New-AccessRelationship: -Name is required." }
-    if (-not $Table) { throw "New-AccessRelationship: -Table is required." }
-    if (-not $ForeignTable) { throw "New-AccessRelationship: -ForeignTable is required." }
-    if (-not $Fields -or $Fields.Count -eq 0) { throw "New-AccessRelationship: -Fields is required." }
+    if (-not $Name) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-Name is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $Name
+            )
+        )
+    }
+    if (-not $Table) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-Table is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $Table
+            )
+        )
+    }
+    if (-not $ForeignTable) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-ForeignTable is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $ForeignTable
+            )
+        )
+    }
+    if (-not $Fields -or $Fields.Count -eq 0) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-Fields is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $Fields
+            )
+        )
+    }
     $app = Connect-AccessDB -DbPath $DbPath
     $db  = $app.CurrentDb()
 
     $rel = $db.CreateRelation($Name, $Table, $ForeignTable, $Attributes)
-    foreach ($fmap in $Fields) {
-        $localName   = $fmap['local']
-        $foreignName = $fmap['foreign']
-        if (-not $localName -or -not $foreignName) {
-            throw "Each field mapping must have 'local' and 'foreign' keys."
+    try {
+        foreach ($fmap in $Fields) {
+            $localName   = $fmap['local']
+            $foreignName = $fmap['foreign']
+            if (-not $localName -or -not $foreignName) {
+                $PSCmdlet.ThrowTerminatingError(
+                    [System.Management.Automation.ErrorRecord]::new(
+                        [System.ArgumentException]::new("Each field mapping must have 'local' and 'foreign' keys."),
+                        'InvalidArgument',
+                        [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                        $fmap
+                    )
+                )
+            }
+            $fld = $rel.CreateField($localName)
+            $fld.ForeignName = $foreignName
+            $rel.Fields.Append($fld)
+            [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($fld)
         }
-        $fld = $rel.CreateField($localName)
-        $fld.ForeignName = $foreignName
-        $rel.Fields.Append($fld)
+        if ($PSCmdlet.ShouldProcess("$Table → $ForeignTable", 'Create relationship')) {
+            $db.Relations.Append($rel)
+        }
+    } finally {
+        [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($rel)
+        [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($db)
     }
-    $db.Relations.Append($rel)
 
     $attrFlags = foreach ($bit in $script:REL_ATTR.Keys) {
         if ($Attributes -band $bit) { $script:REL_ATTR[$bit] }
@@ -209,23 +302,40 @@ function Remove-AccessRelationship {
     .SYNOPSIS
         Delete a relationship by name.
     #>
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
+        [ValidateNotNullOrEmpty()]
         [string]$Name,
         [switch]$AsJson
     )
 
     $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Remove-AccessRelationship'
-    if (-not $Name) { throw "Remove-AccessRelationship: -Name is required." }
+    if (-not $Name) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-Name is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $Name
+            )
+        )
+    }
     $app = Connect-AccessDB -DbPath $DbPath
-    $db  = $app.CurrentDb()
-    $db.Relations.Delete($Name)
+    if ($PSCmdlet.ShouldProcess("relationship '$Name'", 'Remove relationship')) {
+        $db = $app.CurrentDb()
+        try {
+            $db.Relations.Delete($Name)
+        } finally {
+            [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($db)
+        }
 
-    Format-AccessOutput -AsJson:$AsJson -Data ([ordered]@{
-        action = 'deleted'
-        name   = $Name
-    })
+        Format-AccessOutput -AsJson:$AsJson -Data ([ordered]@{
+            action = 'deleted'
+            name   = $Name
+        })
+    }
 }
 
 function Get-AccessReference {
@@ -235,6 +345,7 @@ function Get-AccessReference {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
         [switch]$AsJson
     )
@@ -281,6 +392,7 @@ function Set-AccessReference {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
         [ValidateSet('add','remove')][string]$Action,
         [string]$Name,
@@ -292,7 +404,16 @@ function Set-AccessReference {
     )
 
     $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Set-AccessReference'
-    if (-not $Action) { throw "Set-AccessReference: -Action is required (add, remove)." }
+    if (-not $Action) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-Action is required (add, remove).'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $Action
+            )
+        )
+    }
     $app  = Connect-AccessDB -DbPath $DbPath
     $refs = $app.VBE.ActiveVBProject.References
 
@@ -308,18 +429,54 @@ function Set-AccessReference {
                 action = 'added'; name = $ref.Name; full_path = $RefPath
             }
         } else {
-            throw "Action 'add' requires either -Guid or -RefPath."
+            $PSCmdlet.ThrowTerminatingError(
+                [System.Management.Automation.ErrorRecord]::new(
+                    [System.ArgumentException]::new("Action 'add' requires either -Guid or -RefPath."),
+                    'MissingRequiredParameter',
+                    [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                    $Action
+                )
+            )
         }
     } else {
         # remove
-        if (-not $Name) { throw "Action 'remove' requires -Name." }
+        if (-not $Name) {
+            $PSCmdlet.ThrowTerminatingError(
+                [System.Management.Automation.ErrorRecord]::new(
+                    [System.ArgumentException]::new("Action 'remove' requires -Name."),
+                    'MissingRequiredParameter',
+                    [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                    $Name
+                )
+            )
+        }
         $found = $null
         for ($i = 1; $i -le $refs.Count; $i++) {
             $ref = $refs.Item($i)
             if ($ref.Name -ieq $Name) { $found = $ref; break }
         }
-        if ($null -eq $found) { throw "Reference '$Name' not found." }
-        try { if ($found.BuiltIn) { throw "Cannot remove built-in reference '$Name'." } } catch [System.Management.Automation.PropertyNotFoundException] {}
+        if ($null -eq $found) {
+            $PSCmdlet.ThrowTerminatingError(
+                [System.Management.Automation.ErrorRecord]::new(
+                    [System.IO.FileNotFoundException]::new("Reference '$Name' not found."),
+                    'ObjectNotFound',
+                    [System.Management.Automation.ErrorCategory]::ObjectNotFound,
+                    $Name
+                )
+            )
+        }
+        try {
+            if ($found.BuiltIn) {
+                $PSCmdlet.ThrowTerminatingError(
+                    [System.Management.Automation.ErrorRecord]::new(
+                        [System.InvalidOperationException]::new("Cannot remove built-in reference '$Name'."),
+                        'InvalidOperation',
+                        [System.Management.Automation.ErrorCategory]::InvalidOperation,
+                        $found
+                    )
+                )
+            }
+        } catch [System.Management.Automation.PropertyNotFoundException] {}
         $refs.Remove($found)
         $result = [ordered]@{ action = 'removed'; name = $Name }
     }
@@ -338,6 +495,7 @@ function Set-AccessQuery {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
         [ValidateSet('create','modify','delete','rename','get_sql')][string]$Action,
         [string]$QueryName,
@@ -348,19 +506,55 @@ function Set-AccessQuery {
     )
 
     $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Set-AccessQuery'
-    if (-not $Action) { throw "Set-AccessQuery: -Action is required (create, modify, delete, rename, get_sql)." }
-    if (-not $QueryName) { throw "Set-AccessQuery: -QueryName is required." }
+    if (-not $Action) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-Action is required (create, modify, delete, rename, get_sql).'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $Action
+            )
+        )
+    }
+    if (-not $QueryName) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-QueryName is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $QueryName
+            )
+        )
+    }
     $app = Connect-AccessDB -DbPath $DbPath
     $db  = $app.CurrentDb()
 
     switch ($Action) {
         'create' {
-            if (-not $Sql) { throw "create requires -Sql" }
+            if (-not $Sql) {
+                $PSCmdlet.ThrowTerminatingError(
+                    [System.Management.Automation.ErrorRecord]::new(
+                        [System.ArgumentException]::new("'create' action requires -Sql."),
+                        'MissingRequiredParameter',
+                        [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                        $Sql
+                    )
+                )
+            }
             $null = $db.CreateQueryDef($QueryName, $Sql)
             $result = [ordered]@{ action = 'created'; query_name = $QueryName; sql = $Sql }
         }
         'modify' {
-            if (-not $Sql) { throw "modify requires -Sql" }
+            if (-not $Sql) {
+                $PSCmdlet.ThrowTerminatingError(
+                    [System.Management.Automation.ErrorRecord]::new(
+                        [System.ArgumentException]::new("'modify' action requires -Sql."),
+                        'MissingRequiredParameter',
+                        [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                        $Sql
+                    )
+                )
+            }
             $qd = $db.QueryDefs($QueryName)
             $qd.SQL = $Sql
             $result = [ordered]@{ action = 'modified'; query_name = $QueryName; sql = $Sql }
@@ -375,7 +569,16 @@ function Set-AccessQuery {
             }
         }
         'rename' {
-            if (-not $NewName) { throw "rename requires -NewName" }
+            if (-not $NewName) {
+                $PSCmdlet.ThrowTerminatingError(
+                    [System.Management.Automation.ErrorRecord]::new(
+                        [System.ArgumentException]::new("'rename' action requires -NewName."),
+                        'MissingRequiredParameter',
+                        [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                        $NewName
+                    )
+                )
+            }
             $qd = $db.QueryDefs($QueryName)
             $qd.Name = $NewName
             $result = [ordered]@{ action = 'renamed'; old_name = $QueryName; new_name = $NewName }
@@ -398,6 +601,7 @@ function Get-AccessStartupOption {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
         [switch]$AsJson
     )
@@ -442,13 +646,24 @@ function Get-AccessDatabaseProperty {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
+        [ValidateNotNullOrEmpty()]
         [string]$Name,
         [switch]$AsJson
     )
 
     $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Get-AccessDatabaseProperty'
-    if (-not $Name) { throw "Get-AccessDatabaseProperty: -Name is required." }
+    if (-not $Name) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-Name is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $Name
+            )
+        )
+    }
     $app = Connect-AccessDB -DbPath $DbPath
     $db  = $app.CurrentDb()
 
@@ -463,7 +678,14 @@ function Get-AccessDatabaseProperty {
         $result = [ordered]@{ name = $Name; value = $val; source = 'application' }
         return (Format-AccessOutput -AsJson:$AsJson -Data $result)
     } catch {
-        throw "Property '$Name' not found in CurrentDb().Properties or Application.GetOption"
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.IO.FileNotFoundException]::new("Property '$Name' not found in CurrentDb().Properties or Application.GetOption."),
+                'ObjectNotFound',
+                [System.Management.Automation.ErrorCategory]::ObjectNotFound,
+                $Name
+            )
+        )
     }
 }
 
@@ -474,7 +696,9 @@ function Set-AccessDatabaseProperty {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
+        [ValidateNotNullOrEmpty()]
         [string]$Name,
         $Value,
         [int]$PropType = -1,
@@ -482,8 +706,26 @@ function Set-AccessDatabaseProperty {
     )
 
     $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Set-AccessDatabaseProperty'
-    if (-not $Name) { throw "Set-AccessDatabaseProperty: -Name is required." }
-    if (-not $PSBoundParameters.ContainsKey('Value')) { throw "Set-AccessDatabaseProperty: -Value is required." }
+    if (-not $Name) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-Name is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $Name
+            )
+        )
+    }
+    if (-not $PSBoundParameters.ContainsKey('Value')) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-Value is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $PSBoundParameters
+            )
+        )
+    }
     $app     = Connect-AccessDB -DbPath $DbPath
     $db      = $app.CurrentDb()
     $coerced = ConvertTo-CoercedProp -Value $Value

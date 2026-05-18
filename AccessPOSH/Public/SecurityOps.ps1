@@ -10,6 +10,7 @@ function Test-AccessDatabasePassword {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
         [switch]$AsJson
     )
@@ -48,6 +49,7 @@ function Set-AccessDatabasePassword {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
         [string]$NewPassword,
         [string]$OldPassword,
@@ -82,6 +84,7 @@ function Remove-AccessDatabasePassword {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
         [string]$CurrentPassword,
         [switch]$AsJson
@@ -114,6 +117,7 @@ function Get-AccessDatabaseEncryption {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
         [switch]$AsJson
     )

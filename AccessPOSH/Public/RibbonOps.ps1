@@ -10,6 +10,7 @@ function Get-AccessRibbon {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
         [string]$RibbonName,
         [switch]$AsJson
@@ -81,6 +82,7 @@ function Set-AccessRibbon {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
         [string]$RibbonName,
         [string]$RibbonXml,
@@ -148,6 +150,7 @@ function Remove-AccessRibbon {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
         [string]$RibbonName,
         [switch]$AsJson

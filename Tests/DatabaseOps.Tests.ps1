@@ -112,3 +112,51 @@ Describe 'Invoke-AccessSQLBatch' {
         { Invoke-AccessSQLBatch -DbPath 'x:\fake.accdb' } | Should -Throw '*-Statements is required*'
     }
 }
+
+Describe 'New-AccessDatabase — Parameter Validation' {
+    It 'throws when -DbPath is empty' {
+        { New-AccessDatabase -DbPath '' } | Should -Throw '*-DbPath is required*'
+    }
+    It 'throws when -DbPath is not supplied' {
+        { New-AccessDatabase } | Should -Throw '*-DbPath is required*'
+    }
+}
+
+Describe 'Repair-AccessDatabase — Parameter Validation' {
+    It 'throws when -DbPath is empty' {
+        { Repair-AccessDatabase -DbPath '' } | Should -Throw '*-DbPath is required*'
+    }
+}
+
+Describe 'Invoke-AccessDecompile — Parameter Validation' {
+    It 'throws when -DbPath is empty' {
+        { Invoke-AccessDecompile -DbPath '' } | Should -Throw '*-DbPath is required*'
+    }
+}
+
+Describe 'Get-AccessCode — Parameter Validation' {
+    It 'throws when -ObjectType is omitted' {
+        { Get-AccessCode -DbPath 'x:\fake.accdb' } | Should -Throw '*-ObjectType is required*'
+    }
+    It 'throws when -Name is omitted' {
+        { Get-AccessCode -DbPath 'x:\fake.accdb' -ObjectType 'module' } | Should -Throw '*-Name is required*'
+    }
+}
+
+Describe 'Set-AccessCode — Parameter Validation' {
+    It 'throws when -ObjectType is omitted' {
+        { Set-AccessCode -DbPath 'x:\fake.accdb' } | Should -Throw '*-ObjectType is required*'
+    }
+    It 'throws when -Code is omitted' {
+        { Set-AccessCode -DbPath 'x:\fake.accdb' -ObjectType 'module' -Name 'M1' } | Should -Throw '*-Code is required*'
+    }
+}
+
+Describe 'Remove-AccessObject — Parameter Validation' {
+    It 'throws when -ObjectType is omitted' {
+        { Remove-AccessObject -DbPath 'x:\fake.accdb' } | Should -Throw '*-ObjectType is required*'
+    }
+    It 'throws when -Name is omitted' {
+        { Remove-AccessObject -DbPath 'x:\fake.accdb' -ObjectType 'module' } | Should -Throw '*-Name is required*'
+    }
+}

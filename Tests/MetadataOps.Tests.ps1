@@ -118,3 +118,42 @@ Describe 'Get-AccessTip' {
         (Get-Command Get-AccessTip).CmdletBinding | Should -BeTrue
     }
 }
+
+Describe 'Set-AccessLinkedTable — Parameter Validation' {
+    It 'throws when -TableName is omitted' {
+        { Set-AccessLinkedTable -DbPath 'x:\fake.accdb' } | Should -Throw '*-TableName is required*'
+    }
+    It 'throws when -NewConnect is omitted' {
+        { Set-AccessLinkedTable -DbPath 'x:\fake.accdb' -TableName 'T' } | Should -Throw '*-NewConnect is required*'
+    }
+}
+
+Describe 'New-AccessRelationship — Parameter Validation' {
+    It 'throws when -Name is omitted' {
+        { New-AccessRelationship -DbPath 'x:\fake.accdb' } | Should -Throw '*-Name is required*'
+    }
+    It 'throws when -Table is omitted' {
+        { New-AccessRelationship -DbPath 'x:\fake.accdb' -Name 'Rel1' } | Should -Throw '*-Table is required*'
+    }
+    It 'throws when -ForeignTable is omitted' {
+        { New-AccessRelationship -DbPath 'x:\fake.accdb' -Name 'Rel1' -Table 'T1' } | Should -Throw '*-ForeignTable is required*'
+    }
+    It 'throws when -Fields is empty' {
+        { New-AccessRelationship -DbPath 'x:\fake.accdb' -Name 'Rel1' -Table 'T1' -ForeignTable 'T2' -Fields @() } | Should -Throw '*-Fields is required*'
+    }
+}
+
+Describe 'Set-AccessQuery — Parameter Validation' {
+    It 'throws when -Action is omitted' {
+        { Set-AccessQuery -DbPath 'x:\fake.accdb' } | Should -Throw '*-Action is required*'
+    }
+    It 'throws when -QueryName is omitted' {
+        { Set-AccessQuery -DbPath 'x:\fake.accdb' -Action 'create' } | Should -Throw '*-QueryName is required*'
+    }
+}
+
+Describe 'Set-AccessDatabaseProperty — Parameter Validation' {
+    It 'throws when -Name is omitted' {
+        { Set-AccessDatabaseProperty -DbPath 'x:\fake.accdb' } | Should -Throw '*-Name is required*'
+    }
+}

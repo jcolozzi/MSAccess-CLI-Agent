@@ -10,7 +10,9 @@ function Get-AccessSubDataSheet {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
+        [ValidateNotNullOrEmpty()]
         [string]$TableName,
         [switch]$AsJson
     )
@@ -62,7 +64,9 @@ function Set-AccessSubDataSheet {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
+        [ValidateNotNullOrEmpty()]
         [string]$TableName,
         [string]$SubDataSheetName,
         [string]$LinkChildFields,

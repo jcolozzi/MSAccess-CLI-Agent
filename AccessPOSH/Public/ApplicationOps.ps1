@@ -9,6 +9,7 @@ function Get-AccessApplicationInfo {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
         [switch]$AsJson
     )
@@ -80,6 +81,7 @@ function Test-AccessRuntime {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
         [switch]$AsJson
     )
@@ -112,6 +114,7 @@ function Get-AccessFileInfo {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
         [switch]$AsJson
     )

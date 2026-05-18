@@ -10,6 +10,7 @@ function Show-AccessNavigationPane {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
         [switch]$AsJson
     )
@@ -42,6 +43,7 @@ function Hide-AccessNavigationPane {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
         [switch]$AsJson
     )
@@ -75,6 +77,7 @@ function Set-AccessNavigationPaneLock {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
         [bool]$Locked,
         [switch]$AsJson

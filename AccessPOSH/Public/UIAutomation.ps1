@@ -92,6 +92,7 @@ function Get-AccessScreenshot {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
 
         [ValidateSet('form','report')]

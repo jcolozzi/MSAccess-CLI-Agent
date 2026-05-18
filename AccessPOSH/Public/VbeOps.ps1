@@ -19,19 +19,57 @@ function Get-AccessVbeLine {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
+        [ValidateNotNullOrEmpty()]
         [ValidateSet('module','form','report')][string]$ObjectType,
+        [ValidateNotNullOrEmpty()]
         [string]$ObjectName,
         [int]$StartLine,
         [int]$Count
     )
 
     $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Get-AccessVbeLine'
-    if (-not $ObjectType) { throw "Get-AccessVbeLine: -ObjectType is required (module, form, report)." }
-    if (-not $ObjectName) { throw "Get-AccessVbeLine: -ObjectName is required." }
-    if (-not $PSBoundParameters.ContainsKey('StartLine')) { throw "Get-AccessVbeLine: -StartLine is required." }
-    if (-not $PSBoundParameters.ContainsKey('Count')) { throw "Get-AccessVbeLine: -Count is required." }
-
+    if (-not $ObjectType) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-ObjectType is required (module, form, report).'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $ObjectType
+            )
+        )
+    }
+    if (-not $ObjectName) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-ObjectName is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $ObjectName
+            )
+        )
+    }
+    if (-not $PSBoundParameters.ContainsKey('StartLine')) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-StartLine is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $PSBoundParameters
+            )
+        )
+    }
+    if (-not $PSBoundParameters.ContainsKey('Count')) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-Count is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $PSBoundParameters
+            )
+        )
+    }
     $app = Connect-AccessDB -DbPath $DbPath
     $cm = Get-CodeModule -App $app -ObjectType $ObjectType -ObjectName $ObjectName
     $cacheKey = "${ObjectType}:${ObjectName}"
@@ -40,7 +78,14 @@ function Get-AccessVbeLine {
     $total = $allLines.Count
 
     if ($StartLine -lt 1 -or $StartLine -gt $total) {
-        throw "start_line $StartLine out of range (1-$total)"
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentOutOfRangeException]::new('StartLine', $StartLine, "start_line $StartLine out of range (1-$total)."),
+                'OutOfRange',
+                [System.Management.Automation.ErrorCategory]::LimitsExceeded,
+                $StartLine
+            )
+        )
     }
     $actual = [math]::Min($Count, $total - $StartLine + 1)
     $result = $allLines[($StartLine - 1) .. ($StartLine - 1 + $actual - 1)] -join "`n"
@@ -66,18 +111,47 @@ function Get-AccessVbeProc {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
+        [ValidateNotNullOrEmpty()]
         [ValidateSet('module','form','report')][string]$ObjectType,
+        [ValidateNotNullOrEmpty()]
         [string]$ObjectName,
         [string]$ProcName,
         [switch]$AsJson
     )
 
     $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Get-AccessVbeProc'
-    if (-not $ObjectType) { throw "Get-AccessVbeProc: -ObjectType is required (module, form, report)." }
-    if (-not $ObjectName) { throw "Get-AccessVbeProc: -ObjectName is required." }
-    if (-not $ProcName) { throw "Get-AccessVbeProc: -ProcName is required." }
-
+    if (-not $ObjectType) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-ObjectType is required (module, form, report).'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $ObjectType
+            )
+        )
+    }
+    if (-not $ObjectName) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-ObjectName is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $ObjectName
+            )
+        )
+    }
+    if (-not $ProcName) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-ProcName is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $ProcName
+            )
+        )
+    }
     $app = Connect-AccessDB -DbPath $DbPath
     $cm = Get-CodeModule -App $app -ObjectType $ObjectType -ObjectName $ObjectName
 
@@ -86,7 +160,14 @@ function Get-AccessVbeProc {
         $body  = $cm.ProcBodyLine($ProcName, 0)
         $count = $cm.ProcCountLines($ProcName, 0)
     } catch {
-        throw "Procedure '$ProcName' not found in '$ObjectName': $_"
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.IO.FileNotFoundException]::new("Procedure '$ProcName' not found in '$ObjectName': $_"),
+                'ObjectNotFound',
+                [System.Management.Automation.ErrorCategory]::ObjectNotFound,
+                $ProcName
+            )
+        )
     }
 
     $cacheKey = "${ObjectType}:${ObjectName}"
@@ -121,15 +202,36 @@ function Get-AccessVbeModuleInfo {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
+        [ValidateNotNullOrEmpty()]
         [ValidateSet('module','form','report')][string]$ObjectType,
+        [ValidateNotNullOrEmpty()]
         [string]$ObjectName,
         [switch]$AsJson
     )
 
     $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Get-AccessVbeModuleInfo'
-    if (-not $ObjectType) { throw "Get-AccessVbeModuleInfo: -ObjectType is required (module, form, report)." }
-    if (-not $ObjectName) { throw "Get-AccessVbeModuleInfo: -ObjectName is required." }
+    if (-not $ObjectType) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-ObjectType is required (module, form, report).'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $ObjectType
+            )
+        )
+    }
+    if (-not $ObjectName) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-ObjectName is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $ObjectName
+            )
+        )
+    }
 
     $app = Connect-AccessDB -DbPath $DbPath
     $cm = Get-CodeModule -App $app -ObjectType $ObjectType -ObjectName $ObjectName
@@ -193,10 +295,13 @@ function Set-AccessVbeLine {
     .EXAMPLE
         Set-AccessVbeLine -DbPath "C:\db.accdb" -ObjectType module -ObjectName "Module1" -StartLine 5 -Count 3 -NewCode "' replaced lines"
     #>
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
+        [ValidateNotNullOrEmpty()]
         [ValidateSet('module','form','report')][string]$ObjectType,
+        [ValidateNotNullOrEmpty()]
         [string]$ObjectName,
         [int]$StartLine,
         [int]$Count = 0,
@@ -205,16 +310,50 @@ function Set-AccessVbeLine {
     )
 
     $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Set-AccessVbeLine'
-    if (-not $ObjectType) { throw "Set-AccessVbeLine: -ObjectType is required (module, form, report)." }
-    if (-not $ObjectName) { throw "Set-AccessVbeLine: -ObjectName is required." }
-    if (-not $PSBoundParameters.ContainsKey('StartLine')) { throw "Set-AccessVbeLine: -StartLine is required." }
+    if (-not $ObjectType) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-ObjectType is required (module, form, report).'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $ObjectType
+            )
+        )
+    }
+    if (-not $ObjectName) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-ObjectName is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $ObjectName
+            )
+        )
+    }
+    if (-not $PSBoundParameters.ContainsKey('StartLine')) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-StartLine is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $PSBoundParameters
+            )
+        )
+    }
 
     $app = Connect-AccessDB -DbPath $DbPath
     $cm = Get-CodeModule -App $app -ObjectType $ObjectType -ObjectName $ObjectName
     $total = $cm.CountOfLines
 
     if ($StartLine -lt 1 -or $StartLine -gt ($total + 1)) {
-        throw "start_line $StartLine out of range (1-$total)"
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentOutOfRangeException]::new('StartLine', $StartLine, "start_line $StartLine out of range (1-$total)."),
+                'OutOfRange',
+                [System.Management.Automation.ErrorCategory]::LimitsExceeded,
+                $StartLine
+            )
+        )
     }
 
     $clamped = $false
@@ -265,10 +404,13 @@ function Set-AccessVbeProc {
     .EXAMPLE
         Set-AccessVbeProc -DbPath "C:\db.accdb" -ObjectType module -ObjectName "Module1" -ProcName "OldFunc" -NewCode "Public Sub OldFunc()`r`n  MsgBox ""Hello""`r`nEnd Sub"
     #>
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
+        [ValidateNotNullOrEmpty()]
         [ValidateSet('module','form','report')][string]$ObjectType,
+        [ValidateNotNullOrEmpty()]
         [string]$ObjectName,
         [string]$ProcName,
         [string]$NewCode = '',
@@ -276,9 +418,36 @@ function Set-AccessVbeProc {
     )
 
     $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Set-AccessVbeProc'
-    if (-not $ObjectType) { throw "Set-AccessVbeProc: -ObjectType is required (module, form, report)." }
-    if (-not $ObjectName) { throw "Set-AccessVbeProc: -ObjectName is required." }
-    if (-not $ProcName) { throw "Set-AccessVbeProc: -ProcName is required." }
+    if (-not $ObjectType) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-ObjectType is required (module, form, report).'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $ObjectType
+            )
+        )
+    }
+    if (-not $ObjectName) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-ObjectName is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $ObjectName
+            )
+        )
+    }
+    if (-not $ProcName) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-ProcName is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $ProcName
+            )
+        )
+    }
 
     $app = Connect-AccessDB -DbPath $DbPath
 
@@ -297,7 +466,14 @@ function Set-AccessVbeProc {
         $start = $cm.ProcStartLine($ProcName, 0)
         $count = $cm.ProcCountLines($ProcName, 0)
     } catch {
-        throw "Procedure '$ProcName' not found in '$ObjectName': $_"
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.IO.FileNotFoundException]::new("Procedure '$ProcName' not found in '$ObjectName': $_"),
+                'ObjectNotFound',
+                [System.Management.Automation.ErrorCategory]::ObjectNotFound,
+                $ProcName
+            )
+        )
     }
 
     $total = $cm.CountOfLines
@@ -352,10 +528,13 @@ function Update-AccessVbeProc {
         Update-AccessVbeProc -DbPath "C:\db.accdb" -ObjectType module -ObjectName "Module1" `
             -ProcName "MyFunc" -Patches @(@{find='MsgBox "Old"'; replace='MsgBox "New"'})
     #>
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
+        [ValidateNotNullOrEmpty()]
         [ValidateSet('module','form','report')][string]$ObjectType,
+        [ValidateNotNullOrEmpty()]
         [string]$ObjectName,
         [string]$ProcName,
         [array]$Patches,
@@ -363,10 +542,46 @@ function Update-AccessVbeProc {
     )
 
     $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Update-AccessVbeProc'
-    if (-not $ObjectType) { throw "Update-AccessVbeProc: -ObjectType is required (module, form, report)." }
-    if (-not $ObjectName) { throw "Update-AccessVbeProc: -ObjectName is required." }
-    if (-not $ProcName) { throw "Update-AccessVbeProc: -ProcName is required." }
-    if (-not $Patches) { throw "Update-AccessVbeProc: -Patches is required." }
+    if (-not $ObjectType) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-ObjectType is required (module, form, report).'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $ObjectType
+            )
+        )
+    }
+    if (-not $ObjectName) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-ObjectName is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $ObjectName
+            )
+        )
+    }
+    if (-not $ProcName) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-ProcName is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $ProcName
+            )
+        )
+    }
+    if (-not $Patches) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-Patches is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $Patches
+            )
+        )
+    }
 
     $app = Connect-AccessDB -DbPath $DbPath
 
@@ -393,7 +608,14 @@ function Update-AccessVbeProc {
             $count = $cm.ProcCountLines($ProcName, 3)
             $kind = 3
         } catch {
-            throw "Procedure '$ProcName' not found in '$ObjectName': $_"
+            $PSCmdlet.ThrowTerminatingError(
+                [System.Management.Automation.ErrorRecord]::new(
+                    [System.IO.FileNotFoundException]::new("Procedure '$ProcName' not found in '$ObjectName': $_"),
+                    'ObjectNotFound',
+                    [System.Management.Automation.ErrorCategory]::ObjectNotFound,
+                    $ProcName
+                )
+            )
         }
     }
 
@@ -479,7 +701,14 @@ function Update-AccessVbeProc {
     } catch {
         # Rollback: restore backup
         try { $cm.InsertLines($start, $backupCode) } catch {}
-        throw "Patch failed (rolled back): $_"
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.InvalidOperationException]::new("Patch failed (rolled back): $_"),
+                'InvalidOperation',
+                [System.Management.Automation.ErrorCategory]::InvalidOperation,
+                $ProcName
+            )
+        )
     }
 
     # Invalidate caches
@@ -525,19 +754,49 @@ function Add-AccessVbeCode {
     .EXAMPLE
         Add-AccessVbeCode -DbPath "C:\db.accdb" -ObjectType module -ObjectName "Module1" -Code "Public Sub NewSub()`r`nEnd Sub"
     #>
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
+        [ValidateNotNullOrEmpty()]
         [ValidateSet('module','form','report')][string]$ObjectType,
+        [ValidateNotNullOrEmpty()]
         [string]$ObjectName,
         [string]$Code,
         [switch]$AsJson
     )
 
     $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Add-AccessVbeCode'
-    if (-not $ObjectType) { throw "Add-AccessVbeCode: -ObjectType is required (module, form, report)." }
-    if (-not $ObjectName) { throw "Add-AccessVbeCode: -ObjectName is required." }
-    if (-not $Code) { throw "Add-AccessVbeCode: -Code is required." }
+    if (-not $ObjectType) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-ObjectType is required (module, form, report).'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $ObjectType
+            )
+        )
+    }
+    if (-not $ObjectName) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-ObjectName is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $ObjectName
+            )
+        )
+    }
+    if (-not $Code) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-Code is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $Code
+            )
+        )
+    }
 
     $app = Connect-AccessDB -DbPath $DbPath
     $cm = Get-CodeModule -App $app -ObjectType $ObjectType -ObjectName $ObjectName
@@ -582,8 +841,11 @@ function Find-AccessVbeText {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
+        [ValidateNotNullOrEmpty()]
         [ValidateSet('module','form','report')][string]$ObjectType,
+        [ValidateNotNullOrEmpty()]
         [string]$ObjectName,
         [string]$SearchText,
         [switch]$MatchCase,
@@ -592,9 +854,36 @@ function Find-AccessVbeText {
     )
 
     $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Find-AccessVbeText'
-    if (-not $ObjectType) { throw "Find-AccessVbeText: -ObjectType is required (module, form, report)." }
-    if (-not $ObjectName) { throw "Find-AccessVbeText: -ObjectName is required." }
-    if (-not $SearchText) { throw "Find-AccessVbeText: -SearchText is required." }
+    if (-not $ObjectType) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-ObjectType is required (module, form, report).'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $ObjectType
+            )
+        )
+    }
+    if (-not $ObjectName) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-ObjectName is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $ObjectName
+            )
+        )
+    }
+    if (-not $SearchText) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-SearchText is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $SearchText
+            )
+        )
+    }
 
     $app = Connect-AccessDB -DbPath $DbPath
     $cm = Get-CodeModule -App $app -ObjectType $ObjectType -ObjectName $ObjectName
@@ -645,6 +934,7 @@ function Search-AccessVbe {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
         [string]$SearchText,
         [switch]$MatchCase,
@@ -654,7 +944,16 @@ function Search-AccessVbe {
     )
 
     $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Search-AccessVbe'
-    if (-not $SearchText) { throw "Search-AccessVbe: -SearchText is required." }
+    if (-not $SearchText) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-SearchText is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $SearchText
+            )
+        )
+    }
 
     $app = Connect-AccessDB -DbPath $DbPath
     $objects = Get-AccessObject -DbPath $DbPath -ObjectType all
@@ -723,6 +1022,7 @@ function Search-AccessQuery {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
         [string]$SearchText,
         [switch]$MatchCase,
@@ -732,7 +1032,16 @@ function Search-AccessQuery {
     )
 
     $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Search-AccessQuery'
-    if (-not $SearchText) { throw "Search-AccessQuery: -SearchText is required." }
+    if (-not $SearchText) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-SearchText is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $SearchText
+            )
+        )
+    }
 
     $app = Connect-AccessDB -DbPath $DbPath
     $db = $app.CurrentDb()
@@ -779,6 +1088,7 @@ function Find-AccessUsage {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
         [string]$SearchText,
         [switch]$MatchCase,
@@ -788,7 +1098,16 @@ function Find-AccessUsage {
     )
 
     $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Find-AccessUsage'
-    if (-not $SearchText) { throw "Find-AccessUsage: -SearchText is required." }
+    if (-not $SearchText) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-SearchText is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $SearchText
+            )
+        )
+    }
 
     # 1. VBA matches
     $vbaResult = Search-AccessVbe -DbPath $DbPath -SearchText $SearchText -MatchCase:$MatchCase -UseRegex:$UseRegex -MaxResults $MaxResults
@@ -883,19 +1202,36 @@ function Invoke-AccessMacro {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
         [string]$MacroName,
         [switch]$AsJson
     )
 
     $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Invoke-AccessMacro'
-    if (-not $MacroName) { throw "Invoke-AccessMacro: -MacroName is required." }
+    if (-not $MacroName) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-MacroName is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $MacroName
+            )
+        )
+    }
 
     $app = Connect-AccessDB -DbPath $DbPath
     try {
         $app.DoCmd.RunMacro($MacroName)
     } catch {
-        throw "Error running macro '$MacroName': $_"
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.InvalidOperationException]::new("Error running macro '$MacroName': $_"),
+                'InvalidOperation',
+                [System.Management.Automation.ErrorCategory]::InvalidOperation,
+                $MacroName
+            )
+        )
     }
 
     Format-AccessOutput -AsJson:$AsJson -Data @{
@@ -925,6 +1261,7 @@ function Invoke-AccessVba {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
         [string]$Procedure,
         [object[]]$Arguments,
@@ -932,13 +1269,29 @@ function Invoke-AccessVba {
     )
 
     $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Invoke-AccessVba'
-    if (-not $Procedure) { throw "Invoke-AccessVba: -Procedure is required." }
+    if (-not $Procedure) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-Procedure is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $Procedure
+            )
+        )
+    }
 
     $app = Connect-AccessDB -DbPath $DbPath
     $callArgs = if ($Arguments) { $Arguments } else { @() }
 
     if ($callArgs.Count -gt 30) {
-        throw 'Application.Run supports max 30 arguments.'
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentOutOfRangeException]::new('Arguments', $callArgs.Count, 'Application.Run supports max 30 arguments.'),
+                'OutOfRange',
+                [System.Management.Automation.ErrorCategory]::LimitsExceeded,
+                $callArgs
+            )
+        )
     }
 
     # Forms.FormName.Method -> direct COM access
@@ -972,7 +1325,14 @@ function Invoke-AccessVba {
                     }
                 }
             } catch {
-                throw "Error calling Forms('$formName').$methodName : $_. Make sure the form is open."
+                $PSCmdlet.ThrowTerminatingError(
+                    [System.Management.Automation.ErrorRecord]::new(
+                        [System.InvalidOperationException]::new("Error calling Forms('$formName').$methodName : $_. Make sure the form is open."),
+                        'InvalidOperation',
+                        [System.Management.Automation.ErrorCategory]::InvalidOperation,
+                        $formName
+                    )
+                )
             }
 
             return Format-AccessOutput -AsJson:$AsJson -Data ([ordered]@{
@@ -999,7 +1359,14 @@ function Invoke-AccessVba {
             }
         }
     } catch {
-        throw "Error running '$Procedure': $_"
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.InvalidOperationException]::new("Error running '$Procedure': $_"),
+                'InvalidOperation',
+                [System.Management.Automation.ErrorCategory]::InvalidOperation,
+                $Procedure
+            )
+        )
     }
 
     Format-AccessOutput -AsJson:$AsJson -Data ([ordered]@{
@@ -1024,19 +1391,36 @@ function Invoke-AccessEval {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
         [string]$Expression,
         [switch]$AsJson
     )
 
     $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Invoke-AccessEval'
-    if (-not $Expression) { throw "Invoke-AccessEval: -Expression is required." }
+    if (-not $Expression) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-Expression is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $Expression
+            )
+        )
+    }
 
     $app = Connect-AccessDB -DbPath $DbPath
     try {
         $result = $app.Eval($Expression)
     } catch {
-        throw "Error evaluating '$Expression': $_"
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.InvalidOperationException]::new("Error evaluating '$Expression': $_"),
+                'InvalidOperation',
+                [System.Management.Automation.ErrorCategory]::InvalidOperation,
+                $Expression
+            )
+        )
     }
 
     Format-AccessOutput -AsJson:$AsJson -Data ([ordered]@{
@@ -1059,6 +1443,7 @@ function Test-AccessVbaCompile {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
         [switch]$AsJson
     )
@@ -1132,6 +1517,7 @@ function Import-AccessVbaFile {
     #>
     [CmdletBinding()]
     param(
+        [ValidateNotNullOrEmpty()]
         [string]$DbPath,
         [string]$FilePath,
         [switch]$Force = $true,
@@ -1139,15 +1525,38 @@ function Import-AccessVbaFile {
     )
 
     $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Import-AccessVbaFile'
-    if (-not $FilePath) { throw "Import-AccessVbaFile: -FilePath is required." }
+    if (-not $FilePath) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-FilePath is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $FilePath
+            )
+        )
+    }
     if (-not (Test-Path -LiteralPath $FilePath -PathType Leaf)) {
-        throw "Import-AccessVbaFile: File not found: $FilePath"
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.IO.FileNotFoundException]::new("File not found: $FilePath"),
+                'ObjectNotFound',
+                [System.Management.Automation.ErrorCategory]::ObjectNotFound,
+                $FilePath
+            )
+        )
     }
 
     $FilePath = (Resolve-Path -LiteralPath $FilePath).Path
     $ext = [System.IO.Path]::GetExtension($FilePath).ToLower()
     if ($ext -notin '.bas', '.cls') {
-        throw "Import-AccessVbaFile: Only .bas and .cls files are supported. Got '$ext'."
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new("Only .bas and .cls files are supported. Got '$ext'."),
+                'InvalidArgument',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $FilePath
+            )
+        )
     }
 
     # Validate encoding
@@ -1158,7 +1567,14 @@ function Import-AccessVbaFile {
 
     if (-not $encCheck.IsAnsi) {
         if (-not $Force) {
-            throw "Import-AccessVbaFile: $($encCheck.Reason) Use -Force to auto-convert."
+            $PSCmdlet.ThrowTerminatingError(
+                [System.Management.Automation.ErrorRecord]::new(
+                    [System.InvalidOperationException]::new("$($encCheck.Reason) Use -Force to auto-convert."),
+                    'InvalidOperation',
+                    [System.Management.Automation.ErrorCategory]::InvalidOperation,
+                    $FilePath
+                )
+            )
         }
         Write-Verbose "Non-ANSI encoding detected ($($encCheck.Encoding)). Converting to ANSI temp copy."
         $tmpPath = ConvertTo-AnsiTempFile -SourcePath $FilePath
@@ -1237,9 +1653,25 @@ function Test-AccessVbaFileEncoding {
         [switch]$AsJson
     )
 
-    if (-not $FilePath) { throw "Test-AccessVbaFileEncoding: -FilePath is required." }
+    if (-not $FilePath) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-FilePath is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $FilePath
+            )
+        )
+    }
     if (-not (Test-Path -LiteralPath $FilePath -PathType Leaf)) {
-        throw "Test-AccessVbaFileEncoding: File not found: $FilePath"
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.IO.FileNotFoundException]::new("File not found: $FilePath"),
+                'ObjectNotFound',
+                [System.Management.Automation.ErrorCategory]::ObjectNotFound,
+                $FilePath
+            )
+        )
     }
 
     $FilePath = (Resolve-Path -LiteralPath $FilePath).Path

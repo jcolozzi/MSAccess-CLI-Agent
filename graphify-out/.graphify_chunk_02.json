@@ -1,0 +1,909 @@
+{
+  "nodes": [
+    {
+      "id": "themeops_get_access_theme",
+      "label": "Get-AccessTheme",
+      "file_type": "code",
+      "source_file": "AccessPOSH/Public/ThemeOps.ps1",
+      "source_location": "line 3",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "themeops_set_access_theme",
+      "label": "Set-AccessTheme",
+      "file_type": "code",
+      "source_file": "AccessPOSH/Public/ThemeOps.ps1",
+      "source_location": "line 55",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "themeops_get_access_theme_list",
+      "label": "Get-AccessThemeList",
+      "file_type": "code",
+      "source_file": "AccessPOSH/Public/ThemeOps.ps1",
+      "source_location": "line 99",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "uiautomation_accessposhui",
+      "label": "AccessPoshUI (C# Interop Class)",
+      "file_type": "code",
+      "source_file": "AccessPOSH/Public/UIAutomation.ps1",
+      "source_location": "line 4",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "uiautomation_get_access_screenshot",
+      "label": "Get-AccessScreenshot",
+      "file_type": "code",
+      "source_file": "AccessPOSH/Public/UIAutomation.ps1",
+      "source_location": "line 64",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "uiautomation_send_access_click",
+      "label": "Send-AccessClick",
+      "file_type": "code",
+      "source_file": "AccessPOSH/Public/UIAutomation.ps1",
+      "source_location": "line 230",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "uiautomation_send_access_keyboard",
+      "label": "Send-AccessKeyboard",
+      "file_type": "code",
+      "source_file": "AccessPOSH/Public/UIAutomation.ps1",
+      "source_location": "line 360",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "vbeops_get_access_vbe_line",
+      "label": "Get-AccessVbeLine",
+      "file_type": "code",
+      "source_file": "AccessPOSH/Public/VbeOps.ps1",
+      "source_location": "line 3",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "vbeops_get_access_vbe_proc",
+      "label": "Get-AccessVbeProc",
+      "file_type": "code",
+      "source_file": "AccessPOSH/Public/VbeOps.ps1",
+      "source_location": "line 87",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "vbeops_get_access_vbe_module_info",
+      "label": "Get-AccessVbeModuleInfo",
+      "file_type": "code",
+      "source_file": "AccessPOSH/Public/VbeOps.ps1",
+      "source_location": "line 195",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "vbeops_set_access_vbe_line",
+      "label": "Set-AccessVbeLine",
+      "file_type": "code",
+      "source_file": "AccessPOSH/Public/VbeOps.ps1",
+      "source_location": "line 283",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "vbeops_set_access_vbe_proc",
+      "label": "Set-AccessVbeProc",
+      "file_type": "code",
+      "source_file": "AccessPOSH/Public/VbeOps.ps1",
+      "source_location": "line 400",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "vbeops_update_access_vbe_proc",
+      "label": "Update-AccessVbeProc",
+      "file_type": "code",
+      "source_file": "AccessPOSH/Public/VbeOps.ps1",
+      "source_location": "line 530",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "vbeops_add_access_vbe_code",
+      "label": "Add-AccessVbeCode",
+      "file_type": "code",
+      "source_file": "AccessPOSH/Public/VbeOps.ps1",
+      "source_location": "line 750",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "vbeops_find_access_vbe_text",
+      "label": "Find-AccessVbeText",
+      "file_type": "code",
+      "source_file": "AccessPOSH/Public/VbeOps.ps1",
+      "source_location": "line 820",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "vbeops_search_access_vbe",
+      "label": "Search-AccessVbe",
+      "file_type": "code",
+      "source_file": "AccessPOSH/Public/VbeOps.ps1",
+      "source_location": "line 920",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "vbeops_search_access_query",
+      "label": "Search-AccessQuery",
+      "file_type": "code",
+      "source_file": "AccessPOSH/Public/VbeOps.ps1",
+      "source_location": "line 1000",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "vbeops_find_access_usage",
+      "label": "Find-AccessUsage",
+      "file_type": "code",
+      "source_file": "AccessPOSH/Public/VbeOps.ps1",
+      "source_location": "line 1060",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "vbeops_invoke_access_macro",
+      "label": "Invoke-AccessMacro",
+      "file_type": "code",
+      "source_file": "AccessPOSH/Public/VbeOps.ps1",
+      "source_location": "line 1200",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "vbeops_invoke_access_vba",
+      "label": "Invoke-AccessVba",
+      "file_type": "code",
+      "source_file": "AccessPOSH/Public/VbeOps.ps1",
+      "source_location": "line 1250",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "vbeops_invoke_access_eval",
+      "label": "Invoke-AccessEval",
+      "file_type": "code",
+      "source_file": "AccessPOSH/Public/VbeOps.ps1",
+      "source_location": "line 1380",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "vbeops_test_access_vba_compile",
+      "label": "Test-AccessVbaCompile",
+      "file_type": "code",
+      "source_file": "AccessPOSH/Public/VbeOps.ps1",
+      "source_location": "line 1420",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "vbeops_import_access_vba_file",
+      "label": "Import-AccessVbaFile",
+      "file_type": "code",
+      "source_file": "AccessPOSH/Public/VbeOps.ps1",
+      "source_location": "line 1480",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "tests_module",
+      "label": "AccessPOSH Module Tests",
+      "file_type": "code",
+      "source_file": "Tests/AccessPOSH.Module.Tests.ps1",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "tests_applicationops",
+      "label": "ApplicationOps Tests",
+      "file_type": "code",
+      "source_file": "Tests/ApplicationOps.Tests.ps1",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "tests_databaseops",
+      "label": "DatabaseOps Tests",
+      "file_type": "code",
+      "source_file": "Tests/DatabaseOps.Tests.ps1",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "tests_exporttransfer",
+      "label": "ExportTransfer Tests",
+      "file_type": "code",
+      "source_file": "Tests/ExportTransfer.Tests.ps1",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "tests_formreportops",
+      "label": "FormReportOps Tests",
+      "file_type": "code",
+      "source_file": "Tests/FormReportOps.Tests.ps1",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "tests_importops",
+      "label": "ImportOps Tests",
+      "file_type": "code",
+      "source_file": "Tests/ImportOps.Tests.ps1",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "tests_metadataops",
+      "label": "MetadataOps Tests",
+      "file_type": "code",
+      "source_file": "Tests/MetadataOps.Tests.ps1",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "tests_navigationpaneops",
+      "label": "NavigationPaneOps Tests",
+      "file_type": "code",
+      "source_file": "Tests/NavigationPaneOps.Tests.ps1",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "tests_printops",
+      "label": "PrintOps Tests",
+      "file_type": "code",
+      "source_file": "Tests/PrintOps.Tests.ps1",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "tests_reportops",
+      "label": "ReportOps Tests",
+      "file_type": "code",
+      "source_file": "Tests/ReportOps.Tests.ps1",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "tests_ribbonops",
+      "label": "RibbonOps Tests",
+      "file_type": "code",
+      "source_file": "Tests/RibbonOps.Tests.ps1",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "tests_securityops",
+      "label": "SecurityOps Tests",
+      "file_type": "code",
+      "source_file": "Tests/SecurityOps.Tests.ps1",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "tests_subdatasheetops",
+      "label": "SubDataSheetOps Tests",
+      "file_type": "code",
+      "source_file": "Tests/SubDataSheetOps.Tests.ps1",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "tests_tableops",
+      "label": "TableOps Tests",
+      "file_type": "code",
+      "source_file": "Tests/TableOps.Tests.ps1",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "tests_tempvarops",
+      "label": "TempVarOps Tests",
+      "file_type": "code",
+      "source_file": "Tests/TempVarOps.Tests.ps1",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "tests_themeops",
+      "label": "ThemeOps Tests",
+      "file_type": "code",
+      "source_file": "Tests/ThemeOps.Tests.ps1",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "tests_uiautomation",
+      "label": "UIAutomation Tests",
+      "file_type": "code",
+      "source_file": "Tests/UIAutomation.Tests.ps1",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "tests_vbeops",
+      "label": "VbeOps Tests",
+      "file_type": "code",
+      "source_file": "Tests/VbeOps.Tests.ps1",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "pattern_ws_normalized_patching",
+      "label": "Whitespace-Normalized Patch Matching",
+      "file_type": "rationale",
+      "source_file": "AccessPOSH/Public/VbeOps.ps1",
+      "source_location": "Update-AccessVbeProc",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Three-layer matching strategy: (1) exact string match, (2) whitespace-normalized fallback via Test-WsNormalizedMatch, (3) context error reporting via Get-ClosestMatchContext. This handles VBA editor reformatting and indentation drift without silently applying wrong patches."
+    },
+    {
+      "id": "pattern_printwindow_capture",
+      "label": "PrintWindow Screenshot Capture",
+      "file_type": "rationale",
+      "source_file": "AccessPOSH/Public/UIAutomation.ps1",
+      "source_location": "Get-AccessScreenshot",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "Uses Win32 PrintWindow with PW_RENDERFULLCONTENT flag for reliable off-screen capture of Access windows, rather than BitBlt screen capture which fails for minimized/occluded windows. Optional MaxWidth resize prevents oversized images."
+    },
+    {
+      "id": "pattern_vbe_code_caching",
+      "label": "VBE Code Caching Strategy",
+      "file_type": "rationale",
+      "source_file": "AccessPOSH/Public/VbeOps.ps1",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "rationale": "VBE CodeModule reads are cached per object_type:object_name key in AccessSession.VbeCodeCache and AccessSession.CmCache. All mutation operations (Set-AccessVbeLine, Set-AccessVbeProc, Update-AccessVbeProc, Add-AccessVbeCode) explicitly invalidate both caches after writes to prevent stale reads."
+    }
+  ],
+  "edges": [
+    {
+      "source": "themeops_get_access_theme",
+      "target": "themeops_set_access_theme",
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "AccessPOSH/Public/ThemeOps.ps1",
+      "source_location": null,
+      "weight": 0.8
+    },
+    {
+      "source": "uiautomation_get_access_screenshot",
+      "target": "uiautomation_accessposhui",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AccessPOSH/Public/UIAutomation.ps1",
+      "source_location": "PrintWindow, GetWindowRect, SetForegroundWindow, IsIconic, ShowWindow",
+      "weight": 1.0
+    },
+    {
+      "source": "uiautomation_send_access_click",
+      "target": "uiautomation_accessposhui",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AccessPOSH/Public/UIAutomation.ps1",
+      "source_location": "mouse_event, SetCursorPos, GetWindowRect, SetForegroundWindow",
+      "weight": 1.0
+    },
+    {
+      "source": "uiautomation_send_access_keyboard",
+      "target": "uiautomation_accessposhui",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AccessPOSH/Public/UIAutomation.ps1",
+      "source_location": "SendMessage, keybd_event, VkKeyScanW, SetForegroundWindow",
+      "weight": 1.0
+    },
+    {
+      "source": "vbeops_find_access_usage",
+      "target": "vbeops_search_access_vbe",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AccessPOSH/Public/VbeOps.ps1",
+      "source_location": "Find-AccessUsage calls Search-AccessVbe for VBA matches",
+      "weight": 1.0
+    },
+    {
+      "source": "vbeops_find_access_usage",
+      "target": "vbeops_search_access_query",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AccessPOSH/Public/VbeOps.ps1",
+      "source_location": "Find-AccessUsage calls Search-AccessQuery for query matches",
+      "weight": 1.0
+    },
+    {
+      "source": "vbeops_update_access_vbe_proc",
+      "target": "pattern_ws_normalized_patching",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AccessPOSH/Public/VbeOps.ps1",
+      "source_location": "Three-layer matching in Update-AccessVbeProc",
+      "weight": 1.0
+    },
+    {
+      "source": "uiautomation_get_access_screenshot",
+      "target": "pattern_printwindow_capture",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AccessPOSH/Public/UIAutomation.ps1",
+      "source_location": "PW_RENDERFULLCONTENT usage",
+      "weight": 1.0
+    },
+    {
+      "source": "vbeops_set_access_vbe_line",
+      "target": "pattern_vbe_code_caching",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AccessPOSH/Public/VbeOps.ps1",
+      "source_location": "VbeCodeCache.Remove after mutation",
+      "weight": 0.9
+    },
+    {
+      "source": "vbeops_set_access_vbe_proc",
+      "target": "pattern_vbe_code_caching",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AccessPOSH/Public/VbeOps.ps1",
+      "source_location": "VbeCodeCache.Remove and CmCache.Remove after mutation",
+      "weight": 0.9
+    },
+    {
+      "source": "vbeops_update_access_vbe_proc",
+      "target": "pattern_vbe_code_caching",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AccessPOSH/Public/VbeOps.ps1",
+      "source_location": "VbeCodeCache.Remove and CmCache.Remove after mutation",
+      "weight": 0.9
+    },
+    {
+      "source": "vbeops_add_access_vbe_code",
+      "target": "pattern_vbe_code_caching",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AccessPOSH/Public/VbeOps.ps1",
+      "source_location": "VbeCodeCache.Remove after append",
+      "weight": 0.9
+    },
+    {
+      "source": "vbeops_test_access_vba_compile",
+      "target": "pattern_vbe_code_caching",
+      "relation": "implements",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AccessPOSH/Public/VbeOps.ps1",
+      "source_location": "Full cache clear after compilation",
+      "weight": 0.9
+    },
+    {
+      "source": "tests_themeops",
+      "target": "themeops_get_access_theme",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Tests/ThemeOps.Tests.ps1",
+      "source_location": "Describe 'Get-AccessTheme'",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_themeops",
+      "target": "themeops_set_access_theme",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Tests/ThemeOps.Tests.ps1",
+      "source_location": "Describe 'Set-AccessTheme'",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_themeops",
+      "target": "themeops_get_access_theme_list",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Tests/ThemeOps.Tests.ps1",
+      "source_location": "Describe 'Get-AccessThemeList'",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_uiautomation",
+      "target": "uiautomation_get_access_screenshot",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Tests/UIAutomation.Tests.ps1",
+      "source_location": "Describe 'Get-AccessScreenshot'",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_uiautomation",
+      "target": "uiautomation_send_access_click",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Tests/UIAutomation.Tests.ps1",
+      "source_location": "Describe 'Send-AccessClick'",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_uiautomation",
+      "target": "uiautomation_send_access_keyboard",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Tests/UIAutomation.Tests.ps1",
+      "source_location": "Describe 'Send-AccessKeyboard'",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_vbeops",
+      "target": "vbeops_get_access_vbe_line",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Tests/VbeOps.Tests.ps1",
+      "source_location": "Describe 'Get-AccessVbeLine'",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_vbeops",
+      "target": "vbeops_set_access_vbe_proc",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Tests/VbeOps.Tests.ps1",
+      "source_location": "Describe 'Set-AccessVbeProc'",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_vbeops",
+      "target": "vbeops_update_access_vbe_proc",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Tests/VbeOps.Tests.ps1",
+      "source_location": "Describe 'Update-AccessVbeProc'",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_vbeops",
+      "target": "vbeops_find_access_vbe_text",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Tests/VbeOps.Tests.ps1",
+      "source_location": "Describe 'Find-AccessVbeText'",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_vbeops",
+      "target": "vbeops_search_access_vbe",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Tests/VbeOps.Tests.ps1",
+      "source_location": "Describe 'Search-AccessVbe'",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_vbeops",
+      "target": "vbeops_invoke_access_macro",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Tests/VbeOps.Tests.ps1",
+      "source_location": "Describe 'Invoke-AccessMacro'",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_vbeops",
+      "target": "vbeops_invoke_access_vba",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Tests/VbeOps.Tests.ps1",
+      "source_location": "Describe 'Invoke-AccessVba'",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_vbeops",
+      "target": "vbeops_invoke_access_eval",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Tests/VbeOps.Tests.ps1",
+      "source_location": "Describe 'Invoke-AccessEval'",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_vbeops",
+      "target": "vbeops_test_access_vba_compile",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Tests/VbeOps.Tests.ps1",
+      "source_location": "Describe 'Test-AccessVbaCompile'",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_vbeops",
+      "target": "vbeops_import_access_vba_file",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Tests/VbeOps.Tests.ps1",
+      "source_location": "Describe 'Import-AccessVbaFile'",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_module",
+      "target": "uiautomation_accessposhui",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Tests/AccessPOSH.Module.Tests.ps1",
+      "source_location": "It 'AccessPoshUI type is loaded'",
+      "weight": 0.9
+    },
+    {
+      "source": "vbeops_get_access_vbe_line",
+      "target": "vbeops_get_access_vbe_proc",
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "AccessPOSH/Public/VbeOps.ps1",
+      "source_location": null,
+      "weight": 0.7
+    },
+    {
+      "source": "vbeops_set_access_vbe_line",
+      "target": "vbeops_set_access_vbe_proc",
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "AccessPOSH/Public/VbeOps.ps1",
+      "source_location": null,
+      "weight": 0.7
+    },
+    {
+      "source": "vbeops_find_access_vbe_text",
+      "target": "vbeops_search_access_vbe",
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "AccessPOSH/Public/VbeOps.ps1",
+      "source_location": "Single-module search vs all-modules search",
+      "weight": 0.8
+    },
+    {
+      "source": "vbeops_search_access_vbe",
+      "target": "vbeops_search_access_query",
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.75,
+      "source_file": "AccessPOSH/Public/VbeOps.ps1",
+      "source_location": "Both search text across database objects",
+      "weight": 0.7
+    },
+    {
+      "source": "uiautomation_send_access_click",
+      "target": "uiautomation_send_access_keyboard",
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "AccessPOSH/Public/UIAutomation.ps1",
+      "source_location": "Both send input to Access window via Win32 interop",
+      "weight": 0.8
+    },
+    {
+      "source": "vbeops_invoke_access_vba",
+      "target": "vbeops_invoke_access_eval",
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.75,
+      "source_file": "AccessPOSH/Public/VbeOps.ps1",
+      "source_location": "Both execute VBA code: Run vs Eval",
+      "weight": 0.7
+    },
+    {
+      "source": "themeops_get_access_theme",
+      "target": "themeops_get_access_theme_list",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.75,
+      "source_file": "AccessPOSH/Public/ThemeOps.ps1",
+      "source_location": null,
+      "weight": 0.6
+    }
+  ],
+  "hyperedges": [
+    {
+      "id": "vbe_code_mutation_pipeline",
+      "label": "VBE Code Mutation Pipeline",
+      "nodes": [
+        "vbeops_set_access_vbe_line",
+        "vbeops_set_access_vbe_proc",
+        "vbeops_update_access_vbe_proc",
+        "vbeops_add_access_vbe_code",
+        "pattern_vbe_code_caching"
+      ],
+      "relation": "implement",
+      "confidence": "EXTRACTED",
+      "confidence_score": 0.95,
+      "source_file": "AccessPOSH/Public/VbeOps.ps1"
+    },
+    {
+      "id": "ui_automation_win32_interop",
+      "label": "Win32/GDI UI Automation Subsystem",
+      "nodes": [
+        "uiautomation_accessposhui",
+        "uiautomation_get_access_screenshot",
+        "uiautomation_send_access_click",
+        "uiautomation_send_access_keyboard"
+      ],
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 0.95,
+      "source_file": "AccessPOSH/Public/UIAutomation.ps1"
+    },
+    {
+      "id": "cross_database_search",
+      "label": "Cross-Database Search Functions",
+      "nodes": [
+        "vbeops_search_access_vbe",
+        "vbeops_search_access_query",
+        "vbeops_find_access_usage"
+      ],
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 0.95,
+      "source_file": "AccessPOSH/Public/VbeOps.ps1"
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}
