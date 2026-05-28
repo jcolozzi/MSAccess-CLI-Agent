@@ -1,0 +1,1420 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Access Graph Viewer</title>
+  <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+  <style>
+    :root {
+      --border: #d0d7de;
+      --panel: #f6f8fa;
+      --text: #1f2328;
+      --muted: #57606a;
+      --bg: #ffffff;
+      --surface: #ffffff;
+    }
+
+    [data-theme="dark"] {
+      --border: #30363d;
+      --panel: #161b22;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --bg: #0d1117;
+      --surface: #21262d;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; color: var(--text); font: 14px/1.4 Arial, sans-serif; }
+    body { display: grid; grid-template-columns: minmax(0, 1fr) 360px; background: var(--bg); }
+    body.sidebar-collapsed { grid-template-columns: minmax(0, 1fr) 0; }
+    body.sidebar-collapsed #right { display: none; }
+
+    #left {
+      min-width: 0;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      height: 100vh;
+    }
+
+    #toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+    }
+
+    #toolbar input[type="text"] {
+      min-width: 220px;
+      padding: 6px 8px;
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+    }
+
+    #toolbar button,
+    #toolbar label.buttonish {
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      padding: 6px 10px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+
+    #toolbar label.buttonish input {
+      display: none;
+    }
+
+    #toolbar .inline {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--muted);
+    }
+
+    #network {
+      position: relative;
+      min-width: 0;
+      min-height: 0;
+      background: var(--bg);
+    }
+
+    #loading-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+      z-index: 10;
+      gap: 12px;
+      font-size: 14px;
+      color: var(--muted);
+    }
+    #loading-overlay.hidden { display: none; }
+    .loading-spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid var(--border);
+      border-top-color: var(--text);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    #status {
+      padding: 8px 12px;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      background: var(--bg);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    #right {
+      height: 100vh;
+      overflow: auto;
+      border-left: 1px solid var(--border);
+      background: var(--panel);
+    }
+
+    .panel {
+      border-bottom: 1px solid var(--border);
+    }
+
+    .panel summary {
+      padding: 12px;
+      margin: 0;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+      user-select: none;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .panel summary::-webkit-details-marker { display: none; }
+
+    .panel summary::after {
+      content: '\25B9';
+      font-size: 13px;
+      transition: transform 0.2s;
+    }
+
+    .panel[open] > summary::after {
+      content: '\25BF';
+      transform: none;
+    }
+
+    .panel-body {
+      padding: 0 12px 12px;
+    }
+
+    .group-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px 10px;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px 10px;
+    }
+
+    .stat-grid div:nth-child(odd) {
+      color: var(--muted);
+    }
+
+    pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font: 12px/1.45 Consolas, Menlo, monospace;
+    }
+
+    .hint {
+      color: var(--muted);
+      margin-top: 8px;
+    }
+
+    .legend {
+      display: grid;
+      gap: 6px;
+    }
+
+    .legend span {
+      display: inline-block;
+      min-width: 90px;
+      color: var(--muted);
+    }
+
+    /* --- Tooltip styles --- */
+    .graph-tip {
+      max-width: 420px;
+      font: 13px/1.45 Arial, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.15);
+      overflow: hidden;
+    }
+    .graph-tip-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      color: #fff;
+      font-weight: 600;
+      font-size: 13px;
+    }
+    .graph-tip-body {
+      padding: 8px 10px;
+    }
+    .graph-tip-row {
+      display: flex;
+      gap: 6px;
+      padding: 2px 0;
+    }
+    .graph-tip-key {
+      color: var(--muted);
+      min-width: 80px;
+      flex-shrink: 0;
+    }
+    .graph-tip-val {
+      word-break: break-word;
+    }
+    .graph-tip-sql {
+      font: 12px/1.4 Consolas, Menlo, monospace;
+      background: var(--panel);
+      padding: 4px 6px;
+      border-radius: 3px;
+      margin: 4px 0;
+      max-height: 80px;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .graph-tip-conn {
+      margin-top: 6px;
+      padding-top: 6px;
+      border-top: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .graph-tip details {
+      margin-top: 6px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .graph-tip details summary {
+      cursor: pointer;
+      user-select: none;
+    }
+    .graph-tip details .graph-tip-row {
+      font-size: 11px;
+    }
+
+    /* --- Details panel --- */
+    .detail-card { font-size: 13px; }
+    .detail-card h3 {
+      margin: 0 0 8px;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .detail-card h3 .badge {
+      display: inline-block;
+      padding: 1px 6px;
+      border-radius: 3px;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .detail-card .meta-grid {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 2px 8px;
+      margin-bottom: 8px;
+    }
+    .detail-card .meta-key { color: var(--muted); }
+    .detail-card .neighbors { margin-top: 8px; }
+    .detail-card .neighbors h4 {
+      margin: 0 0 4px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .detail-card .neighbor-link {
+      display: inline-block;
+      margin: 2px 4px 2px 0;
+      padding: 1px 6px;
+      border-radius: 3px;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      font-size: 12px;
+      background: var(--bg);
+      text-decoration: none;
+      color: var(--text);
+    }
+    .detail-card .neighbor-link:hover {
+      background: var(--panel);
+      border-color: #0969da;
+      color: #0969da;
+    }
+    .detail-card .focus-btn {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 4px 10px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      cursor: pointer;
+      background: var(--bg);
+      font-size: 12px;
+      color: var(--text);
+    }
+    .detail-card .focus-btn:hover { background: var(--panel); }
+    .detail-card .focus-btn.active { background: #0969da; color: #fff; border-color: #0969da; }
+
+    /* --- Edge filter section --- */
+    .edge-filter-list {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 4px;
+    }
+    .edge-filter-list label {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+    }
+    .edge-filter-list .swatch {
+      display: inline-block;
+      width: 20px;
+      height: 0;
+      vertical-align: middle;
+    }
+
+    /* --- Sidebar & theme toggles --- */
+    .toolbar-separator {
+      width: 1px;
+      height: 20px;
+      background: var(--border);
+      margin: 0 2px;
+    }
+
+    #sidebarToggle,
+    #themeToggle {
+      font-size: 16px;
+      min-width: 32px;
+      text-align: center;
+      padding: 4px 6px;
+    }
+
+    .toolbar-spacer {
+      flex: 1 1 auto;
+    }
+
+    /* --- vis-network navigation buttons (dark-mode fix) --- */
+    .vis-button {
+      filter: none;
+    }
+    [data-theme="dark"] .vis-button {
+      filter: invert(1) hue-rotate(180deg);
+    }
+  </style>
+</head>
+<body>
+  <div id="left">
+    <div id="toolbar">
+      <label class="buttonish">Load graph.json
+        <input id="fileInput" type="file" accept=".json,application/json">
+      </label>
+      <input id="searchBox" type="text" placeholder="Search node label or ID">
+      <button id="searchButton" type="button">Find</button>
+      <button id="fitButton" type="button">Fit</button>
+      <label class="inline"><input id="physicsToggle" type="checkbox" checked> Physics</label>
+      <label class="inline"><input id="hierarchicalToggle" type="checkbox"> Hierarchical</label>
+      <label class="inline"><input id="labelsToggle" type="checkbox" checked> Edge labels</label>
+      <span class="toolbar-spacer"></span>
+      <span class="toolbar-separator"></span>
+      <button id="themeToggle" type="button" title="Toggle light/dark mode">&#9790;</button>
+      <button id="sidebarToggle" type="button" title="Toggle sidebar">&#9776;</button>
+    </div>
+    <div id="network">
+      <div id="loading-overlay" class="hidden">
+        <div class="loading-spinner"></div>
+        <div id="loading-text">Preparing graph…</div>
+      </div>
+    </div>
+    <div id="status">Load a graph.json file or keep a graph.json beside this HTML file.</div>
+  </div>
+
+  <aside id="right">
+    <details class="panel" open>
+      <summary>Filters</summary>
+      <div class="panel-body">
+        <div id="groupFilters" class="group-list"></div>
+        <div class="hint">Only nodes with checked groups are shown. Edges are shown only when both endpoints are visible.</div>
+      </div>
+    </details>
+
+    <details class="panel" open>
+      <summary>Edge Filters</summary>
+      <div class="panel-body">
+        <div id="edgeKindFilters" class="edge-filter-list"></div>
+        <div class="hint">Toggle edge kinds. Nodes stay in place.</div>
+      </div>
+    </details>
+
+    <details class="panel">
+      <summary>Summary</summary>
+      <div class="panel-body">
+        <div id="summary" class="stat-grid"></div>
+      </div>
+    </details>
+
+    <details class="panel">
+      <summary>Legend</summary>
+      <div class="panel-body">
+        <div class="legend">
+          <div><span style="color:#2da44e">&#9632; table</span> database shape</div>
+          <div><span style="color:#0969da">&#9670; query</span> diamond</div>
+          <div><span style="color:#1a7f7a">&#9632; form</span> box</div>
+          <div><span style="color:#bf8700">&#9632; report</span> box</div>
+          <div><span style="color:#8250df">&#11042; macro</span> hexagon</div>
+          <div><span style="color:#57606a">&#9650; module</span> triangle</div>
+          <div><span style="color:#54aeff">&#9679; sql</span> ellipse</div>
+          <div><span style="color:#afb8c1">&#8226; field</span> dot</div>
+        </div>
+      </div>
+    </details>
+
+    <details class="panel" open>
+      <summary>Details</summary>
+      <div class="panel-body">
+        <div id="details"><span style="color:var(--muted)">Nothing selected.</span></div>
+      </div>
+    </details>
+  </aside>
+
+  <!-- EMBED_GRAPH_DATA -->
+  <script>
+    const state = {
+      graph: null,
+      network: null,
+      nodesDataSet: null,
+      edgesDataSet: null,
+      visibleGroups: new Set(),
+      visibleEdgeKinds: new Set(),
+      labelsEnabled: true,
+      physicsEnabled: true,
+      hierarchicalEnabled: false,
+      focusedNodeId: null,
+      tooltipCache: new Map(),
+      _stabilizeAndFreeze: false,
+    };
+
+    const groupStyles = {
+      table:  { shape: 'database', color: { background: '#2da44e', border: '#1a7f37', highlight: { background: '#3fb950', border: '#1a7f37' }, hover: { background: '#3fb950', border: '#1a7f37' } }, font: { color: '#fff' } },
+      query:  { shape: 'diamond',  color: { background: '#0969da', border: '#0550ae', highlight: { background: '#218bff', border: '#0550ae' }, hover: { background: '#218bff', border: '#0550ae' } }, font: { color: '#fff' } },
+      form:   { shape: 'box',      color: { background: '#1a7f7a', border: '#0e5a56', highlight: { background: '#2ea9a3', border: '#0e5a56' }, hover: { background: '#2ea9a3', border: '#0e5a56' } }, font: { color: '#fff' } },
+      report: { shape: 'box',      color: { background: '#bf8700', border: '#9a6700', highlight: { background: '#d4a72c', border: '#9a6700' }, hover: { background: '#d4a72c', border: '#9a6700' } }, font: { color: '#fff' } },
+      macro:  { shape: 'hexagon',  color: { background: '#8250df', border: '#6639ba', highlight: { background: '#a371f7', border: '#6639ba' }, hover: { background: '#a371f7', border: '#6639ba' } }, font: { color: '#fff' } },
+      module: { shape: 'triangle', color: { background: '#57606a', border: '#424a53', highlight: { background: '#6e7781', border: '#424a53' }, hover: { background: '#6e7781', border: '#424a53' } }, font: { color: '#fff' } },
+      sql:    { shape: 'ellipse',  color: { background: '#54aeff', border: '#218bff', highlight: { background: '#80ccff', border: '#218bff' }, hover: { background: '#80ccff', border: '#218bff' } }, font: { color: '#000' } },
+      field:  { shape: 'dot', size: 10, color: { background: '#afb8c1', border: '#8c959f', highlight: { background: '#d0d7de', border: '#8c959f' }, hover: { background: '#d0d7de', border: '#8c959f' } } },
+    };
+
+    const groupLevels = { table: 0, query: 1, form: 2, report: 2, macro: 3, module: 4, sql: 1, field: 0 };
+
+    const edgeStyles = {
+      'relation':           { color: '#888888', dashes: false, width: 2 },
+      'recordsource':       { color: '#888888', dashes: false, width: 2 },
+      'recordsource-sql':   { color: '#888888', dashes: false, width: 2 },
+      'vba-type-ref':       { color: '#8250df', dashes: [8, 4], width: 1.5 },
+      'vba-data-ref':       { color: '#2da44e', dashes: [3, 3], width: 1.5 },
+      'vba-openform':       { color: '#0969da', dashes: false, width: 1.5 },
+      'vba-openreport':     { color: '#0969da', dashes: false, width: 1.5 },
+      'vba-openquery':      { color: '#0969da', dashes: false, width: 1.5 },
+      'vba-opentable':      { color: '#0969da', dashes: false, width: 1.5 },
+      'vba-querydefs':      { color: '#0969da', dashes: false, width: 1.5 },
+      'vba-runsql':         { color: '#0969da', dashes: false, width: 1.5 },
+      'controlsource':      { color: '#bf8700', dashes: false, width: 1 },
+      'control-expression': { color: '#bf8700', dashes: [5, 3], width: 1 },
+      'sourceobject':       { color: '#1a7f7a', dashes: false, width: 2 },
+      'query-sql-reference':{ color: '#0969da', dashes: false, width: 1.5 },
+      'sql-reference':      { color: '#54aeff', dashes: false, width: 1 },
+      'macro-openform':     { color: '#8250df', dashes: false, width: 1.5 },
+      'macro-openreport':   { color: '#8250df', dashes: false, width: 1.5 },
+      'macro-openquery':    { color: '#8250df', dashes: false, width: 1.5 },
+      'macro-opentable':    { color: '#8250df', dashes: false, width: 1.5 },
+      'macro-runsql':       { color: '#8250df', dashes: false, width: 1.5 },
+      'vba-sourceobject':   { color: '#1a7f7a', dashes: [6, 3], width: 2 },
+      'field-owner':        { color: '#afb8c1', dashes: false, width: 1 },
+    };
+    const defaultEdgeStyle = { color: '#aaaaaa', dashes: false, width: 1 };
+
+    // Internal keys hidden from tooltips/details (shown in expandable section)
+    const internalKeys = new Set(['rawHash', 'rawPath', 'sqlHash', 'sqlPath']);
+
+    function setStatus(text) {
+      document.getElementById('status').textContent = text;
+    }
+
+    function safeString(value) {
+      return value == null ? '' : String(value);
+    }
+
+    function humanSize(bytes) {
+      if (bytes == null || bytes === 0) return '';
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    function showLoading(text) {
+      const overlay = document.getElementById('loading-overlay');
+      const textEl = document.getElementById('loading-text');
+      if (overlay) overlay.classList.remove('hidden');
+      if (textEl && text) textEl.textContent = text;
+    }
+
+    function hideLoading() {
+      const overlay = document.getElementById('loading-overlay');
+      if (overlay) overlay.classList.add('hidden');
+    }
+
+    function saveFilterState() {
+      try {
+        localStorage.setItem('access-graph-groups', JSON.stringify([...state.visibleGroups]));
+        localStorage.setItem('access-graph-edge-kinds', JSON.stringify([...state.visibleEdgeKinds]));
+      } catch (_) {}
+    }
+
+    function groupColor(group) {
+      const gs = groupStyles[group];
+      if (!gs) return '#888';
+      return typeof gs.color === 'string' ? gs.color : (gs.color && gs.color.background) || '#888';
+    }
+
+    // ─── Tooltip builders ───
+
+    function buildNodeTooltip(nodeId) {
+      if (state.tooltipCache.has(nodeId)) return state.tooltipCache.get(nodeId);
+
+      const rawNode = state.graph ? state.graph.nodes.find(n => n.id === nodeId) : null;
+      if (!rawNode) return null;
+
+      const meta = rawNode.meta || {};
+      const group = safeString(rawNode.group);
+      const label = safeString(rawNode.label || rawNode.id);
+
+      const tip = document.createElement('div');
+      tip.className = 'graph-tip';
+
+      // Header
+      const header = document.createElement('div');
+      header.className = 'graph-tip-header';
+      header.style.background = groupColor(group);
+      header.textContent = `${group.toUpperCase()}: ${label}`;
+      tip.appendChild(header);
+
+      const body = document.createElement('div');
+      body.className = 'graph-tip-body';
+
+      // Type-specific fields
+      const rows = [];
+      const internals = [];
+
+      if (group === 'table') {
+        if (meta.fieldCount) rows.push(['Fields', meta.fieldCount]);
+        if (meta.sourceTable) rows.push(['Linked to', meta.sourceTable]);
+        if (meta.connect) rows.push(['Connect', meta.connect]);
+        if (meta.rawSize) rows.push(['Raw size', humanSize(meta.rawSize)]);
+      } else if (group === 'query') {
+        if (meta.sqlPreview) rows.push(['__sql__', meta.sqlPreview]);
+        if (meta.rawSize) rows.push(['Raw size', humanSize(meta.rawSize)]);
+      } else if (group === 'form' || group === 'report') {
+        if (meta.rawSize) rows.push(['Raw size', humanSize(meta.rawSize)]);
+      } else if (group === 'module') {
+        if (meta.rawSize) rows.push(['Raw size', humanSize(meta.rawSize)]);
+      } else if (group === 'sql') {
+        if (meta.origin) rows.push(['Origin', meta.origin]);
+        if (meta.preview) rows.push(['__sql__', meta.preview]);
+        if (meta.sqlLength) rows.push(['SQL length', meta.sqlLength + ' chars']);
+      } else if (group === 'field') {
+        if (meta.ownerName) rows.push(['Owner', meta.ownerName]);
+        if (meta.dataType) rows.push(['Type', meta.dataType]);
+        if (meta.verified != null) rows.push(['Verified', meta.verified ? 'Yes' : 'No']);
+      }
+
+      for (const [key, val] of rows) {
+        if (key === '__sql__') {
+          const sqlDiv = document.createElement('div');
+          sqlDiv.className = 'graph-tip-sql';
+          sqlDiv.textContent = String(val).substring(0, 300);
+          body.appendChild(sqlDiv);
+        } else {
+          const row = document.createElement('div');
+          row.className = 'graph-tip-row';
+          row.innerHTML = `<span class="graph-tip-key">${key}</span><span class="graph-tip-val">${escapeHtml(String(val))}</span>`;
+          body.appendChild(row);
+        }
+      }
+
+      // Connection summary
+      if (state.network) {
+        try {
+          const neighbors = state.network.getConnectedNodes(nodeId);
+          if (neighbors.length > 0) {
+            const counts = {};
+            for (const nid of neighbors) {
+              const nn = state.nodesDataSet.get(nid);
+              if (nn) {
+                const g = safeString(nn.group);
+                counts[g] = (counts[g] || 0) + 1;
+              }
+            }
+            const parts = Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([g, c]) => `${c} ${g}${c > 1 ? 's' : ''}`);
+            const conn = document.createElement('div');
+            conn.className = 'graph-tip-conn';
+            conn.textContent = '\u2194 ' + parts.join(', ');
+            body.appendChild(conn);
+          }
+        } catch (_) { /* node not in network */ }
+      }
+
+      // Internal metadata (expandable)
+      const hasInternals = Object.keys(meta).some(k => internalKeys.has(k) && meta[k]);
+      if (hasInternals) {
+        const details = document.createElement('details');
+        details.innerHTML = '<summary>Internals</summary>';
+        for (const k of Object.keys(meta)) {
+          if (internalKeys.has(k) && meta[k]) {
+            const row = document.createElement('div');
+            row.className = 'graph-tip-row';
+            row.innerHTML = `<span class="graph-tip-key">${k}</span><span class="graph-tip-val">${escapeHtml(String(meta[k]))}</span>`;
+            details.appendChild(row);
+          }
+        }
+        body.appendChild(details);
+      }
+
+      tip.appendChild(body);
+      state.tooltipCache.set(nodeId, tip);
+      return tip;
+    }
+
+    function buildEdgeTooltip(edgeId) {
+      const rawEdge = state.graph ? state.graph.edges.find(e => e.id === edgeId) : null;
+      if (!rawEdge) return '';
+
+      const meta = rawEdge.meta || {};
+      const kind = safeString(rawEdge.kind);
+      const fromNode = state.graph.nodes.find(n => n.id === rawEdge.from);
+      const toNode = state.graph.nodes.find(n => n.id === rawEdge.to);
+
+      const tip = document.createElement('div');
+      tip.className = 'graph-tip';
+
+      const es = edgeStyles[kind] || defaultEdgeStyle;
+      const header = document.createElement('div');
+      header.className = 'graph-tip-header';
+      header.style.background = es.color;
+      header.textContent = kind || 'edge';
+      tip.appendChild(header);
+
+      const body = document.createElement('div');
+      body.className = 'graph-tip-body';
+
+      // From → To
+      const route = document.createElement('div');
+      route.className = 'graph-tip-row';
+      route.innerHTML = `<span class="graph-tip-val">${escapeHtml(fromNode ? fromNode.label : rawEdge.from)} \u2192 ${escapeHtml(toNode ? toNode.label : rawEdge.to)}</span>`;
+      body.appendChild(route);
+
+      // Edge meta (skip internals)
+      for (const [k, v] of Object.entries(meta)) {
+        if (!v || internalKeys.has(k)) continue;
+        const row = document.createElement('div');
+        row.className = 'graph-tip-row';
+        row.innerHTML = `<span class="graph-tip-key">${escapeHtml(k)}</span><span class="graph-tip-val">${escapeHtml(String(v))}</span>`;
+        body.appendChild(row);
+      }
+
+      tip.appendChild(body);
+      return tip;
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // ─── Details panel ───
+
+    function showNodeDetails(nodeId) {
+      const container = document.getElementById('details');
+      const rawNode = state.graph ? state.graph.nodes.find(n => n.id === nodeId) : null;
+      if (!rawNode) {
+        container.innerHTML = '<span style="color:var(--muted)">Node not found.</span>';
+        return;
+      }
+
+      const meta = rawNode.meta || {};
+      const group = safeString(rawNode.group);
+      const label = safeString(rawNode.label || rawNode.id);
+
+      let html = '<div class="detail-card">';
+      html += `<h3><span class="badge" style="background:${groupColor(group)}">${group}</span> ${escapeHtml(label)}</h3>`;
+
+      // Meta fields (non-internal, non-empty)
+      const metaEntries = Object.entries(meta).filter(([k, v]) => !internalKeys.has(k) && v != null && v !== '');
+      if (metaEntries.length) {
+        html += '<div class="meta-grid">';
+        for (const [k, v] of metaEntries) {
+          const display = k === 'rawSize' ? humanSize(v) : String(v);
+          html += `<div class="meta-key">${escapeHtml(k)}</div><div>${escapeHtml(display)}</div>`;
+        }
+        html += '</div>';
+      }
+
+      // Connected nodes
+      if (state.network) {
+        try {
+          const connEdges = state.network.getConnectedEdges(nodeId);
+          const incoming = [];
+          const outgoing = [];
+          for (const eid of connEdges) {
+            const edge = state.edgesDataSet.get(eid);
+            if (!edge) continue;
+            if (edge.from === nodeId) {
+              const target = state.nodesDataSet.get(edge.to);
+              if (target) outgoing.push({ label: target.label, id: target.id, group: safeString(target.group), kind: safeString(edge.kind) });
+            } else {
+              const source = state.nodesDataSet.get(edge.from);
+              if (source) incoming.push({ label: source.label, id: source.id, group: safeString(source.group), kind: safeString(edge.kind) });
+            }
+          }
+
+          if (outgoing.length) {
+            html += '<div class="neighbors"><h4>\u2192 Outgoing (' + outgoing.length + ')</h4>';
+            for (const n of outgoing) {
+              html += `<a class="neighbor-link" data-node-id="${escapeHtml(n.id)}" title="${escapeHtml(n.kind)}"><span style="color:${groupColor(n.group)}">\u25CF</span> ${escapeHtml(n.label)}</a>`;
+            }
+            html += '</div>';
+          }
+          if (incoming.length) {
+            html += '<div class="neighbors"><h4>\u2190 Incoming (' + incoming.length + ')</h4>';
+            for (const n of incoming) {
+              html += `<a class="neighbor-link" data-node-id="${escapeHtml(n.id)}" title="${escapeHtml(n.kind)}"><span style="color:${groupColor(n.group)}">\u25CF</span> ${escapeHtml(n.label)}</a>`;
+            }
+            html += '</div>';
+          }
+        } catch (_) {}
+      }
+
+      // Focus neighborhood button
+      const isFocused = state.focusedNodeId === nodeId;
+      html += `<button class="focus-btn ${isFocused ? 'active' : ''}" data-focus-id="${escapeHtml(nodeId)}">${isFocused ? '\u2716 Reset View' : '\u26B2 Focus Neighborhood'}</button>`;
+
+      // Internals
+      const intEntries = Object.entries(meta).filter(([k, v]) => internalKeys.has(k) && v);
+      if (intEntries.length) {
+        html += '<details style="margin-top:8px;font-size:11px;color:var(--muted)"><summary>Internals</summary>';
+        html += '<div class="meta-grid" style="margin-top:4px">';
+        for (const [k, v] of intEntries) {
+          html += `<div class="meta-key">${escapeHtml(k)}</div><div style="word-break:break-all">${escapeHtml(String(v))}</div>`;
+        }
+        html += '</div></details>';
+      }
+
+      html += '</div>';
+      container.innerHTML = html;
+
+      // Bind neighbor link clicks
+      container.querySelectorAll('.neighbor-link').forEach(link => {
+        link.addEventListener('click', (e) => {
+          e.preventDefault();
+          const targetId = link.getAttribute('data-node-id');
+          if (targetId && state.network) {
+            state.network.selectNodes([targetId]);
+            state.network.focus(targetId, { scale: 1.0, animation: { duration: 400, easingFunction: 'easeInOutQuad' } });
+            showNodeDetails(targetId);
+          }
+        });
+      });
+
+      // Bind focus button
+      const focusBtn = container.querySelector('.focus-btn');
+      if (focusBtn) {
+        focusBtn.addEventListener('click', () => {
+          const fid = focusBtn.getAttribute('data-focus-id');
+          if (state.focusedNodeId === fid) {
+            clearFocus();
+          } else {
+            applyFocus(fid);
+          }
+        });
+      }
+    }
+
+    function showEdgeDetails(edgeId) {
+      const container = document.getElementById('details');
+      const rawEdge = state.graph ? state.graph.edges.find(e => e.id === edgeId) : null;
+      if (!rawEdge) {
+        container.innerHTML = '<span style="color:var(--muted)">Edge not found.</span>';
+        return;
+      }
+      const meta = rawEdge.meta || {};
+      const kind = safeString(rawEdge.kind);
+      const es = edgeStyles[kind] || defaultEdgeStyle;
+      const fromNode = state.graph.nodes.find(n => n.id === rawEdge.from);
+      const toNode = state.graph.nodes.find(n => n.id === rawEdge.to);
+
+      let html = '<div class="detail-card">';
+      html += `<h3><span class="badge" style="background:${es.color}">${escapeHtml(kind || 'edge')}</span> ${escapeHtml(safeString(rawEdge.label))}</h3>`;
+      html += '<div class="meta-grid">';
+      html += `<div class="meta-key">From</div><div><a class="neighbor-link" data-node-id="${escapeHtml(rawEdge.from)}">${escapeHtml(fromNode ? fromNode.label : rawEdge.from)}</a></div>`;
+      html += `<div class="meta-key">To</div><div><a class="neighbor-link" data-node-id="${escapeHtml(rawEdge.to)}">${escapeHtml(toNode ? toNode.label : rawEdge.to)}</a></div>`;
+      for (const [k, v] of Object.entries(meta)) {
+        if (!v || internalKeys.has(k)) continue;
+        html += `<div class="meta-key">${escapeHtml(k)}</div><div>${escapeHtml(String(v))}</div>`;
+      }
+      html += '</div></div>';
+      container.innerHTML = html;
+
+      container.querySelectorAll('.neighbor-link').forEach(link => {
+        link.addEventListener('click', (e) => {
+          e.preventDefault();
+          const targetId = link.getAttribute('data-node-id');
+          if (targetId && state.network) {
+            state.network.selectNodes([targetId]);
+            state.network.focus(targetId, { scale: 1.0, animation: { duration: 400, easingFunction: 'easeInOutQuad' } });
+            showNodeDetails(targetId);
+          }
+        });
+      });
+    }
+
+    function showDefaultDetails() {
+      const container = document.getElementById('details');
+      if (state.graph && state.graph.meta) {
+        const m = state.graph.meta;
+        let html = '<div class="detail-card">';
+        html += '<h3>Database Info</h3>';
+        html += '<div class="meta-grid">';
+        if (m.database) html += `<div class="meta-key">Database</div><div>${escapeHtml(String(m.database).split('\\').pop())}</div>`;
+        if (m.generatedAt) html += `<div class="meta-key">Generated</div><div>${escapeHtml(new Date(m.generatedAt).toLocaleString())}</div>`;
+        if (m.stats) {
+          for (const [k, v] of Object.entries(m.stats)) {
+            html += `<div class="meta-key">${escapeHtml(k)}</div><div>${v}</div>`;
+          }
+        }
+        html += '</div></div>';
+        container.innerHTML = html;
+      } else {
+        container.innerHTML = '<span style="color:var(--muted)">Nothing selected.</span>';
+      }
+    }
+
+    // ─── Focus / neighborhood highlighting ───
+
+    function applyFocus(nodeId) {
+      if (!state.network || !state.graph) return;
+      state.focusedNodeId = nodeId;
+      const neighbors = new Set(state.network.getConnectedNodes(nodeId));
+      neighbors.add(nodeId);
+      const neighborEdges = new Set(state.network.getConnectedEdges(nodeId));
+
+      // Dim non-neighbors
+      const nodeUpdates = [];
+      const edgeUpdates = [];
+      for (const n of state.nodesDataSet.get()) {
+        const inFocus = neighbors.has(n.id);
+        nodeUpdates.push({ id: n.id, opacity: inFocus ? 1.0 : 0.12 });
+      }
+      for (const e of state.edgesDataSet.get()) {
+        const inFocus = neighborEdges.has(e.id);
+        edgeUpdates.push({ id: e.id, hidden: e._kindHidden || e._groupHidden || !inFocus });
+      }
+      state.nodesDataSet.update(nodeUpdates);
+      state.edgesDataSet.update(edgeUpdates);
+      state.network.fit({ nodes: [...neighbors], animation: { duration: 400, easingFunction: 'easeInOutQuad' } });
+      showNodeDetails(nodeId);
+    }
+
+    function clearFocus() {
+      state.focusedNodeId = null;
+      if (!state.network) return;
+      const nodeUpdates = state.nodesDataSet.get().map(n => ({ id: n.id, opacity: 1.0 }));
+      state.nodesDataSet.update(nodeUpdates);
+      // Restore edge visibility based on filter state only
+      const edgeUpdates = state.edgesDataSet.get().map(e => ({ id: e.id, hidden: e._kindHidden || e._groupHidden || false }));
+      state.edgesDataSet.update(edgeUpdates);
+      applyFilterCounts();
+    }
+
+    // ─── Filters and data loading ───
+
+    function buildSummary(graph) {
+      const summary = document.getElementById('summary');
+      const counts = {};
+      for (const node of graph.nodes) {
+        counts[node.group] = (counts[node.group] || 0) + 1;
+      }
+
+      const entries = [
+        ['Nodes', graph.nodes.length],
+        ['Edges', graph.edges.length],
+        ['Tables', counts.table || 0],
+        ['Queries', counts.query || 0],
+        ['Forms', counts.form || 0],
+        ['Reports', counts.report || 0],
+        ['Macros', counts.macro || 0],
+        ['Modules', counts.module || 0],
+        ['SQL nodes', counts.sql || 0],
+        ['Field nodes', counts.field || 0],
+      ];
+
+      summary.innerHTML = entries.map(([k, v]) => `<div>${k}</div><div>${v}</div>`).join('');
+    }
+
+    function buildGroupFilters(graph) {
+      const container = document.getElementById('groupFilters');
+      const groups = [...new Set(graph.nodes.map(n => n.group))].sort();
+
+      // Restore saved filter state if available
+      let savedGroups = null;
+      try {
+        const raw = localStorage.getItem('access-graph-groups');
+        if (raw) savedGroups = new Set(JSON.parse(raw));
+      } catch (_) {}
+
+      if (savedGroups) {
+        state.visibleGroups = new Set(groups.filter(g => savedGroups.has(g)));
+      } else {
+        state.visibleGroups = new Set(groups);
+      }
+
+      container.innerHTML = '';
+
+      for (const group of groups) {
+        const isChecked = state.visibleGroups.has(group);
+        const id = `group-${group.replace(/[^a-z0-9_-]/gi, '_')}`;
+        const wrapper = document.createElement('label');
+        wrapper.className = 'inline';
+        wrapper.innerHTML = `<input id="${id}" type="checkbox" ${isChecked ? 'checked' : ''}> ${group}`;
+        const input = wrapper.querySelector('input');
+        input.addEventListener('change', () => {
+          if (input.checked) {
+            state.visibleGroups.add(group);
+          } else {
+            state.visibleGroups.delete(group);
+          }
+          saveFilterState();
+          applyFilters();
+        });
+        container.appendChild(wrapper);
+      }
+    }
+
+    function buildEdgeKindFilters(graph) {
+      const container = document.getElementById('edgeKindFilters');
+      const kinds = [...new Set(graph.edges.map(e => safeString(e.kind)).filter(Boolean))].sort();
+
+      // Restore saved edge filter state if available
+      let savedKinds = null;
+      try {
+        const raw = localStorage.getItem('access-graph-edge-kinds');
+        if (raw) savedKinds = new Set(JSON.parse(raw));
+      } catch (_) {}
+
+      if (savedKinds) {
+        state.visibleEdgeKinds = new Set(kinds.filter(k => savedKinds.has(k)));
+      } else {
+        state.visibleEdgeKinds = new Set(kinds);
+      }
+
+      container.innerHTML = '';
+
+      for (const kind of kinds) {
+        const isChecked = state.visibleEdgeKinds.has(kind);
+        const es = edgeStyles[kind] || defaultEdgeStyle;
+        const wrapper = document.createElement('label');
+        const borderStyle = es.dashes ? 'dashed' : 'solid';
+        wrapper.innerHTML = `<input type="checkbox" ${isChecked ? 'checked' : ''}> <span class="swatch" style="border-bottom:2px ${borderStyle} ${es.color}"></span> ${escapeHtml(kind)}`;
+        const input = wrapper.querySelector('input');
+        input.addEventListener('change', () => {
+          if (input.checked) {
+            state.visibleEdgeKinds.add(kind);
+          } else {
+            state.visibleEdgeKinds.delete(kind);
+          }
+          saveFilterState();
+          applyFilters();
+        });
+        container.appendChild(wrapper);
+      }
+    }
+
+    function normalizeNode(node) {
+      const out = { ...node };
+      out.label = safeString(node.label || node.id);
+      out.group = safeString(node.group || 'other');
+      out.title = undefined; // tooltips built lazily on hover
+      const gs = groupStyles[out.group];
+      out.shape = (gs && gs.shape) || 'ellipse';
+      if (gs && gs.size) out.size = gs.size;
+      if (state.hierarchicalEnabled) {
+        out.level = groupLevels[out.group] != null ? groupLevels[out.group] : 5;
+      }
+      return out;
+    }
+
+    function normalizeEdge(edge) {
+      const out = { ...edge };
+      out.label = state.labelsEnabled ? safeString(edge.label || '') : '';
+      out.title = undefined; // tooltips built lazily on hover
+      out.arrows = safeString(edge.arrows || '') === 'to' ? 'to' : '';
+      out.smooth = state.hierarchicalEnabled ? { type: 'cubicBezier', forceDirection: 'vertical', roundness: 0.4 } : { type: 'dynamic' };
+      const es = edgeStyles[safeString(edge.kind)] || defaultEdgeStyle;
+      out.color = { color: es.color, highlight: es.color, hover: es.color, opacity: 0.8 };
+      out.dashes = es.dashes;
+      out.width = es.width;
+      // Track hidden reasons separately
+      out._groupHidden = false;
+      out._kindHidden = false;
+      return out;
+    }
+
+    function getNetworkOptions() {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      const textColor = isDark ? '#e6edf3' : '#1f2328';
+      const bgColor = isDark ? '#0d1117' : '#ffffff';
+      const opts = {
+        interaction: {
+          hover: true,
+          hoverConnectedEdges: true,
+          selectConnectedEdges: true,
+          navigationButtons: true,
+          multiselect: true,
+          tooltipDelay: 200,
+        },
+        physics: {
+          enabled: state.physicsEnabled,
+          stabilization: { iterations: 400 },
+          solver: 'forceAtlas2Based',
+          forceAtlas2Based: { gravitationalConstant: -40, centralGravity: 0.005, springLength: 120, springConstant: 0.06 },
+        },
+        groups: groupStyles,
+        nodes: {
+          font: { size: 14, color: textColor },
+          margin: 10,
+        },
+        edges: {
+          width: 1,
+          selectionWidth: 2,
+          hoverWidth: 1.5,
+          font: { align: 'middle', size: 11, color: textColor, strokeWidth: 2, strokeColor: bgColor },
+        },
+      };
+      if (state.hierarchicalEnabled) {
+        opts.layout = {
+          hierarchical: { enabled: true, direction: 'UD', sortMethod: 'directed', levelSeparation: 150, nodeSpacing: 180, treeSpacing: 200, blockShifting: true, edgeMinimization: true, parentCentralization: true },
+        };
+        opts.physics.solver = 'hierarchicalRepulsion';
+        opts.physics.hierarchicalRepulsion = { centralGravity: 0.0, springLength: 150, springConstant: 0.01, nodeDistance: 200, damping: 0.09 };
+      } else {
+        opts.layout = { improvedLayout: true };
+      }
+      return opts;
+    }
+
+    function createNetwork() {
+      const container = document.getElementById('network');
+      state.nodesDataSet = new vis.DataSet([]);
+      state.edgesDataSet = new vis.DataSet([]);
+
+      state.network = new vis.Network(container, {
+        nodes: state.nodesDataSet,
+        edges: state.edgesDataSet,
+      }, getNetworkOptions());
+
+      state.network.on('click', params => {
+        if (params.nodes.length) {
+          showNodeDetails(params.nodes[0]);
+          return;
+        }
+        if (params.edges.length) {
+          showEdgeDetails(params.edges[0]);
+          return;
+        }
+        showDefaultDetails();
+      });
+
+      state.network.on('doubleClick', params => {
+        if (params.nodes.length) {
+          state.network.focus(params.nodes[0], { scale: 1.2, animation: true });
+        }
+      });
+
+      // Lazy tooltip on hover
+      state.network.on('hoverNode', params => {
+        const tip = buildNodeTooltip(params.node);
+        if (tip) {
+          state.nodesDataSet.update({ id: params.node, title: tip });
+        }
+      });
+
+      state.network.on('hoverEdge', params => {
+        const tip = buildEdgeTooltip(params.edge);
+        if (tip) {
+          state.edgesDataSet.update({ id: params.edge, title: tip });
+        }
+      });
+
+      // Stabilization progress → update loading overlay
+      state.network.on('stabilizationProgress', params => {
+        const pct = Math.round((params.iterations / params.total) * 100);
+        showLoading(`Stabilizing layout\u2026 ${pct}%`);
+      });
+
+      // After stabilization → freeze physics so nodes stay put
+      state.network.on('stabilizationIterationsDone', () => {
+        if (state._stabilizeAndFreeze) {
+          state._stabilizeAndFreeze = false;
+          state.physicsEnabled = false;
+          document.getElementById('physicsToggle').checked = false;
+          state.network.setOptions({ physics: { enabled: false } });
+        }
+        state.network.fit({ animation: false });
+        hideLoading();
+      });
+    }
+
+    // ─── Apply filters using hidden property (preserves positions) ───
+
+    function applyFilters() {
+      if (!state.graph || !state.network) return;
+
+      state.focusedNodeId = null;
+      state.tooltipCache.clear();
+
+      // Build full normalized sets on first load, or update hidden flags
+      const currentNodes = state.nodesDataSet.get();
+      if (currentNodes.length === 0) {
+        // First load: add all nodes and edges
+        const allNodes = state.graph.nodes.map(normalizeNode);
+        const allEdges = state.graph.edges.map(normalizeEdge);
+
+        // Set initial hidden state
+        for (const n of allNodes) {
+          n.hidden = !state.visibleGroups.has(n.group);
+        }
+        const hiddenNodeIds = new Set(allNodes.filter(n => n.hidden).map(n => n.id));
+        for (const e of allEdges) {
+          e._groupHidden = hiddenNodeIds.has(e.from) || hiddenNodeIds.has(e.to);
+          e._kindHidden = !state.visibleEdgeKinds.has(safeString(e.kind));
+          e.hidden = e._groupHidden || e._kindHidden;
+        }
+
+        state.nodesDataSet.add(allNodes);
+        state.edgesDataSet.add(allEdges);
+        state.network.setOptions(getNetworkOptions());
+      } else {
+        // Subsequent filter toggles: update hidden flags only
+        const nodeUpdates = [];
+        for (const n of currentNodes) {
+          const shouldHide = !state.visibleGroups.has(n.group);
+          if (n.hidden !== shouldHide) {
+            nodeUpdates.push({ id: n.id, hidden: shouldHide, opacity: 1.0 });
+          }
+        }
+        if (nodeUpdates.length) state.nodesDataSet.update(nodeUpdates);
+
+        // Rebuild hidden node set
+        const hiddenNodeIds = new Set();
+        for (const n of state.nodesDataSet.get()) {
+          if (n.hidden) hiddenNodeIds.add(n.id);
+        }
+
+        const edgeUpdates = [];
+        for (const e of state.edgesDataSet.get()) {
+          const groupHidden = hiddenNodeIds.has(e.from) || hiddenNodeIds.has(e.to);
+          const kindHidden = !state.visibleEdgeKinds.has(safeString(e.kind));
+          const shouldHide = groupHidden || kindHidden;
+          if (e.hidden !== shouldHide || e._groupHidden !== groupHidden || e._kindHidden !== kindHidden) {
+            edgeUpdates.push({ id: e.id, hidden: shouldHide, _groupHidden: groupHidden, _kindHidden: kindHidden });
+          }
+        }
+        if (edgeUpdates.length) state.edgesDataSet.update(edgeUpdates);
+
+        // Update edge labels if toggled
+        const labelUpdates = [];
+        for (const e of state.edgesDataSet.get()) {
+          const rawEdge = state.graph.edges.find(re => re.id === e.id);
+          const wantLabel = state.labelsEnabled ? safeString(rawEdge ? rawEdge.label : '') : '';
+          if (e.label !== wantLabel) {
+            labelUpdates.push({ id: e.id, label: wantLabel });
+          }
+        }
+        if (labelUpdates.length) state.edgesDataSet.update(labelUpdates);
+      }
+
+      applyFilterCounts();
+    }
+
+    function applyFilterCounts() {
+      const visibleNodes = state.nodesDataSet.get().filter(n => !n.hidden);
+      const visibleEdges = state.edgesDataSet.get().filter(e => !e.hidden);
+      setStatus(`Showing ${visibleNodes.length} nodes and ${visibleEdges.length} edges.`);
+    }
+
+    function loadGraph(graph) {
+      if (!graph || !Array.isArray(graph.nodes) || !Array.isArray(graph.edges)) {
+        throw new Error('Invalid graph format. Expected { nodes: [], edges: [] }.');
+      }
+
+      state.graph = graph;
+      state.tooltipCache.clear();
+      state.focusedNodeId = null;
+
+      // Enable physics temporarily for stabilization, then auto-freeze
+      state.physicsEnabled = true;
+      state._stabilizeAndFreeze = true;
+      document.getElementById('physicsToggle').checked = true;
+
+      showLoading('Processing graph data\u2026');
+      buildSummary(graph);
+      buildGroupFilters(graph);
+      buildEdgeKindFilters(graph);
+      applyFilters();
+      showDefaultDetails();
+    }
+
+    async function tryLoadDefaultGraph() {
+      if (location.protocol === 'file:') {
+        return new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open('GET', 'graph.json', true);
+          xhr.onload = () => {
+            if (xhr.status === 0 || xhr.status === 200) {
+              try {
+                const graph = JSON.parse(xhr.responseText);
+                loadGraph(graph);
+                setStatus('Loaded graph.json.');
+                resolve();
+              } catch (e) {
+                reject(new Error('graph.json is not valid JSON.'));
+              }
+            } else {
+              reject(new Error(`XHR status ${xhr.status}`));
+            }
+          };
+          xhr.onerror = () => reject(new Error('Cannot load graph.json via file://. Use the Load button or serve with a local HTTP server.'));
+          xhr.send();
+        });
+      }
+      const response = await fetch('graph.json', { cache: 'no-store' });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status} while loading graph.json`);
+      }
+      const graph = await response.json();
+      loadGraph(graph);
+      setStatus('Loaded graph.json.');
+    }
+
+    function searchGraph() {
+      if (!state.graph || !state.network) return;
+
+      const query = document.getElementById('searchBox').value.trim().toLowerCase();
+      if (!query) {
+        state.network.unselectAll();
+        setStatus('Search box is empty.');
+        return;
+      }
+
+      const matches = state.nodesDataSet.get().filter(node => {
+        return !node.hidden && (safeString(node.label).toLowerCase().includes(query) || safeString(node.id).toLowerCase().includes(query));
+      }).map(node => node.id);
+
+      if (!matches.length) {
+        setStatus(`No visible nodes matched "${query}".`);
+        return;
+      }
+
+      state.network.selectNodes(matches);
+      state.network.fit({ nodes: matches, animation: true });
+      setStatus(`Matched ${matches.length} visible node(s).`);
+    }
+
+    // ─── Event bindings ───
+
+    document.getElementById('fileInput').addEventListener('change', async event => {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      showLoading(`Loading ${file.name}\u2026`);
+      try {
+        const text = await file.text();
+        const graph = JSON.parse(text);
+        // Full reset for new graph
+        state.nodesDataSet.clear();
+        state.edgesDataSet.clear();
+        loadGraph(graph);
+        setStatus(`Loaded ${file.name}.`);
+      } catch (error) {
+        setStatus(`Failed to load file: ${error.message}`);
+        hideLoading();
+      }
+    });
+
+    document.getElementById('searchButton').addEventListener('click', searchGraph);
+    document.getElementById('searchBox').addEventListener('keydown', event => {
+      if (event.key === 'Enter') searchGraph();
+    });
+
+    document.getElementById('fitButton').addEventListener('click', () => {
+      if (state.network) state.network.fit({ animation: true });
+    });
+
+    document.getElementById('physicsToggle').addEventListener('change', event => {
+      state.physicsEnabled = event.target.checked;
+      state._stabilizeAndFreeze = false; // user is manually controlling physics
+      if (state.network) state.network.setOptions(getNetworkOptions());
+    });
+
+    document.getElementById('hierarchicalToggle').addEventListener('change', event => {
+      state.hierarchicalEnabled = event.target.checked;
+      if (state.network) {
+        state.network.destroy();
+        state.tooltipCache.clear();
+        state.focusedNodeId = null;
+        // Re-enable physics for stabilization of new layout
+        state.physicsEnabled = true;
+        state._stabilizeAndFreeze = true;
+        document.getElementById('physicsToggle').checked = true;
+        showLoading('Rebuilding layout\u2026');
+        createNetwork();
+        // Re-add all nodes/edges with new normalization
+        state.nodesDataSet.clear();
+        state.edgesDataSet.clear();
+        applyFilters();
+      }
+    });
+
+    document.getElementById('labelsToggle').addEventListener('change', event => {
+      state.labelsEnabled = event.target.checked;
+      applyFilters();
+    });
+
+    createNetwork();
+
+    // ─── Theme & sidebar persistence ───
+    (function initPrefs() {
+      const savedTheme = localStorage.getItem('access-graph-theme');
+      if (savedTheme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        document.getElementById('themeToggle').innerHTML = '\u2600';
+      }
+      const savedSidebar = localStorage.getItem('access-graph-sidebar');
+      if (savedSidebar === 'collapsed') {
+        document.body.classList.add('sidebar-collapsed');
+      }
+    })();
+
+    document.getElementById('themeToggle').addEventListener('click', () => {
+      const html = document.documentElement;
+      const wasDark = html.getAttribute('data-theme') === 'dark';
+      if (wasDark) {
+        html.removeAttribute('data-theme');
+        localStorage.setItem('access-graph-theme', 'light');
+        document.getElementById('themeToggle').innerHTML = '\u263E';
+      } else {
+        html.setAttribute('data-theme', 'dark');
+        localStorage.setItem('access-graph-theme', 'dark');
+        document.getElementById('themeToggle').innerHTML = '\u2600';
+      }
+      state.tooltipCache.clear();
+      if (state.network) state.network.setOptions(getNetworkOptions());
+    });
+
+    document.getElementById('sidebarToggle').addEventListener('click', () => {
+      const collapsed = document.body.classList.toggle('sidebar-collapsed');
+      localStorage.setItem('access-graph-sidebar', collapsed ? 'collapsed' : 'open');
+      if (state.network) {
+        setTimeout(() => state.network.redraw(), 50);
+      }
+    });
+
+    // Try embedded data first, then fetch/XHR
+    // Defer to let the UI shell paint before heavy graph work
+    if (typeof EMBEDDED_GRAPH !== 'undefined' && EMBEDDED_GRAPH) {
+      showLoading('Loading embedded graph\u2026');
+      requestAnimationFrame(() => {
+        try {
+          loadGraph(EMBEDDED_GRAPH);
+          setStatus('Loaded embedded graph data.');
+        } catch (error) {
+          setStatus(`Embedded graph error: ${error.message}`);
+          hideLoading();
+        }
+      });
+    } else {
+      tryLoadDefaultGraph().catch(error => {
+        setStatus(`Auto-load skipped: ${error.message}. Use the Load button to open graph.json.`);
+      });
+    }
+  </script>
+</body>
+</html>

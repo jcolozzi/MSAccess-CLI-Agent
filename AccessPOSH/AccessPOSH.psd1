@@ -147,6 +147,9 @@
         # Print
         'Export-AccessFilteredReport'
         'Send-AccessReportToPrinter'
+
+        # Graph
+        'Export-AccessGraph'
     )
 
     CmdletsToExport   = @()
