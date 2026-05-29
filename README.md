@@ -5,7 +5,7 @@
 ![Platform: Windows](https://img.shields.io/badge/platform-Windows-blue?logo=windows)
 ![PowerShell: 5.1+](https://img.shields.io/badge/PowerShell-5.1%2B-blue?logo=powershell)
 ![VS Code](https://img.shields.io/badge/VS%20Code-GitHub%20Copilot%20Chat-blueviolet?logo=visual-studio-code)
-![Functions: 93](https://img.shields.io/badge/functions-93-brightgreen)
+![Functions: 96](https://img.shields.io/badge/functions-96-brightgreen)
 ![Module Version](https://img.shields.io/badge/version-1.0.0-orange)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 
@@ -18,7 +18,7 @@ You:   "Create a Customers table with ID (AutoNumber PK), Name (Text 100), and E
 Agent: → New-AccessTable → confirms success
 ```
 
-The **AccessPOSH** module (included) is a PowerShell port of [unmateria/MCP-Access](https://github.com/unmateria/MCP-Access), expanded to **93 public functions** covering databases, tables, forms, controls, VBA/VBE, SQL, reports, imports, security, and UI automation.
+The **AccessPOSH** module (included) is a PowerShell port of [unmateria/MCP-Access](https://github.com/unmateria/MCP-Access), expanded to **96 public functions** covering databases, tables, forms, controls, VBA/VBE, SQL, reports, imports, security, UI automation, and dependency graph visualization.
 
 ## How it works
 
@@ -63,24 +63,28 @@ git clone https://github.com/jcolozzi/MSAccess-CLI-Agent.git
 
 Choose **one** of the following:
 
-**Option A — User-level (available in every workspace)**
+#### Option A — User-level (available in every workspace)
 
 Copy both `.md` files from the repo root to:
 ```
 C:\Users\%USERNAME%\AppData\Roaming\Code\User\prompts\
 ```
 
-**Option B — Workspace-level (scoped to this project)**
+#### Option B — Workspace-level (scoped to this project)
 
 Copy both `.md` files into a `.github\agents\` folder in your workspace root. VS Code automatically detects any `.md` files in that folder as custom agents.
 
-> **Note:** VS Code detects any `.md` files in the `.github/agents/` folder of your workspace as custom agents.
+> [!NOTE]
+> Helpful context goes here.
+
+> [!NOTE]
+> VS Code detects any `.md` files in the `.github/agents/` folder of your workspace as custom agents.
 
 ### 3 — Update the module path inside the agent files
 
 Open each `.md` agent file and replace the placeholder path with the actual path to `AccessPOSH.psd1` on your machine:
 
-```
+```powershell
 # Before
 Import-Module "C:\path\to\AccessPOSH\AccessPOSH.psd1"
 
@@ -107,22 +111,25 @@ In VS Code Copilot Chat, click the agent picker and choose **access-dev**. Open 
 | "Import forms and modules from the src folder" | `Import-AccessSource` |
 | "Take a screenshot of the open form" | `Get-AccessScreenshot` |
 | "Import data from Customers.csv into the Customers table" | `Import-AccessFromCSV` |
+| "Generate a dependency graph for MyDB.accdb" | `Export-AccessGraph` |
 | "What would happen if I ran New-AccessTable? (dry run)" | `New-AccessTable -WhatIf` |
 
 ## Project structure
 
-```
+```text
 MSAccess-agent/
 ├── AccessPOSH/             # PowerShell module (the engine)
 │   ├── AccessPOSH.psd1     # Module manifest (v1.0.0, PS 5.1+, Desktop + Core)
 │   ├── AccessPOSH.psm1     # Module loader
-│   ├── Public/             # 17 files — one per command category
+│   ├── Public/             # 18 files — one per command category
 │   │   ├── DatabaseOps.ps1
 │   │   ├── TableOps.ps1
 │   │   ├── FormReportOps.ps1
+│   │   ├── GraphOps.ps1
 │   │   ├── VbeOps.ps1
 │   │   └── ...
-│   └── Private/            # Internal helpers (COM session, error formatting, etc.)
+│   ├── Private/            # Internal helpers (COM session, error formatting, etc.)
+│   └── Resources/          # Static assets (graph viewer HTML)
 ├── Tests/                  # Pester test suite — 17 test files
 │   ├── DatabaseOps.Tests.ps1
 │   ├── VbeOps.Tests.ps1
@@ -143,7 +150,7 @@ Invoke-Pester .\Tests\ -Output Detailed
 ## Function reference
 
 <details>
-<summary><strong>View all 91 public functions</strong></summary>
+<summary><strong>View all 96 public functions</strong></summary>
 
 | Category | Functions |
 |---|---|
@@ -175,6 +182,7 @@ Invoke-Pester .\Tests\ -Output Detailed
 | **UI Automation** | `Get-AccessScreenshot`, `Send-AccessClick`, `Send-AccessKeyboard` |
 | **Print** | `Send-AccessReportToPrinter`, `Export-AccessFilteredReport` |
 | **Application** | `Get-AccessApplicationInfo`, `Test-AccessRuntime`, `Get-AccessFileInfo` |
+| **Graph** | `Export-AccessGraph` |
 | **Tips** | `Get-AccessTip` |
 
 </details>
