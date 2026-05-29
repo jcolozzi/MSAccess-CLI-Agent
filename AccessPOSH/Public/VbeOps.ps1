@@ -1687,3 +1687,436 @@ function Test-AccessVbaFileEncoding {
     }
     Format-AccessOutput -AsJson:$AsJson -Data $result
 }
+
+function Find-AccessDefinition {
+    <#
+    .SYNOPSIS
+        Go-to-definition for a VBA symbol. Scans standard modules, form code-behind,
+        and report code-behind for DECLARATIONS of the given symbol.
+    .DESCRIPTION
+        Detects: const, enum, enum_member, type, type_field, sub, function, property
+        (Get/Let/Set, incl. Default Property), declare (Win32 API), and module-level
+        variable. Handles multi-const lines (Const A=1, B=2) and joins VBA line
+        continuations (` _` at end of line). Case-insensitive by default.
+    .PARAMETER DbPath
+        Path to the Access database.
+    .PARAMETER Symbol
+        Name to resolve (e.g. 'dbAccess', 'ccRed', 'ProcessInvoices').
+    .PARAMETER Kinds
+        Optional whitelist of definition kinds. Default: all kinds.
+        Valid: const, enum, enum_member, type, type_field, sub, function, property, declare, variable.
+    .PARAMETER MatchCase
+        Case-sensitive symbol matching.
+    .PARAMETER ScanTypes
+        Which object types to scan. Default: module, form, report.
+    .PARAMETER FirstOnly
+        Stop after the first match.
+    .PARAMETER AsJson
+        Return JSON string instead of PSCustomObject.
+    .EXAMPLE
+        Find-AccessDefinition -DbPath "C:\db.accdb" -Symbol "ccRed"
+    .EXAMPLE
+        Find-AccessDefinition -Symbol "ProcessInvoices" -Kinds function,sub -FirstOnly
+    #>
+    [CmdletBinding()]
+    param(
+        [ValidateNotNullOrEmpty()]
+        [string]$DbPath,
+        [Parameter(Mandatory)]
+        [string]$Symbol,
+        [string[]]$Kinds,
+        [switch]$MatchCase,
+        [ValidateSet('module','form','report')]
+        [string[]]$ScanTypes,
+        [switch]$FirstOnly,
+        [switch]$AsJson
+    )
+
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Find-AccessDefinition'
+
+    # --- Validate kinds -----------------------------------------------------------
+    $allValidKinds = @('const','enum','enum_member','type','type_field',
+                       'sub','function','property','declare','variable')
+
+    $filterKinds = $null
+    if ($Kinds -and $Kinds.Count -gt 0) {
+        $invalid = @($Kinds | Where-Object { $_ -notin $allValidKinds })
+        if ($invalid.Count -gt 0) {
+            $PSCmdlet.ThrowTerminatingError(
+                [System.Management.Automation.ErrorRecord]::new(
+                    [System.ArgumentException]::new(
+                        "Invalid kinds: $($invalid -join ', '). Valid: $($allValidKinds -join ', ')"),
+                    'InvalidKinds',
+                    [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                    $Kinds
+                )
+            )
+        }
+        $filterKinds = [System.Collections.Generic.HashSet[string]]::new(
+            [string[]]$Kinds,
+            [System.StringComparer]::OrdinalIgnoreCase
+        )
+    }
+
+    if (-not $ScanTypes -or $ScanTypes.Count -eq 0) {
+        $ScanTypes = @('module','form','report')
+    }
+
+    # --- Compiled regex patterns --------------------------------------------------
+    $rxOpts = [System.Text.RegularExpressions.RegexOptions]::IgnoreCase
+
+    $rxProc    = [regex]::new(
+        '^\s*(Public\s+|Private\s+|Friend\s+|Global\s+)?(Static\s+)?(Default\s+)?(Sub|Function|Property\s+(Get|Let|Set))\s+(\w+)',
+        $rxOpts)
+    $rxConst   = [regex]::new(
+        '^\s*(Public\s+|Private\s+|Global\s+)?Const\s+',
+        $rxOpts)
+    $rxEnum    = [regex]::new(
+        '^\s*(Public\s+|Private\s+)?Enum\s+(\w+)',
+        $rxOpts)
+    $rxType    = [regex]::new(
+        '^\s*(Public\s+|Private\s+)?Type\s+(\w+)',
+        $rxOpts)
+    $rxDeclare = [regex]::new(
+        '^\s*(Public\s+|Private\s+)?Declare\s+(PtrSafe\s+)?(Sub|Function)\s+(\w+)\s+Lib\s+',
+        $rxOpts)
+    $rxVar     = [regex]::new(
+        '^\s*(Dim|Public|Private|Global)\s+(?!Const\b|Enum\b|Type\b|Sub\b|Function\b|Property\b|Declare\b)',
+        $rxOpts)
+    $rxEndProc = [regex]::new('^\s*End\s+(Sub|Function|Property)\b', $rxOpts)
+    $rxEndEnum = [regex]::new('^\s*End\s+Enum\b', $rxOpts)
+    $rxEndType = [regex]::new('^\s*End\s+Type\b', $rxOpts)
+    $rxEnumMem = [regex]::new('^\s*(\w+)\s*(=\s*(.+?))?\s*$')
+    $rxTypeFld = [regex]::new('^\s*(\w+)(\(.+?\))?\s+As\s+(.+)', $rxOpts)
+    $rxScopePfx = [regex]::new('^\s*(Public|Private|Global)\s+', $rxOpts)
+    $rxConstAfter = [regex]::new('^\s*(Public\s+|Private\s+|Global\s+)?Const\s+', $rxOpts)
+    $rxScopeKw   = [regex]::new('^\s*(Dim|Public|Private|Global)\s+', $rxOpts)
+
+    # --- Name matcher -------------------------------------------------------------
+    $nameMatch = if ($MatchCase) {
+        { param($c) $c -ceq $Symbol }
+    } else {
+        { param($c) $c -ieq $Symbol }
+    }
+
+    # --- Connect and iterate components -------------------------------------------
+    $app = Connect-AccessDB -DbPath $DbPath
+    $project = $app.VBE.ActiveVBProject
+    $defs = [System.Collections.Generic.List[PSCustomObject]]::new()
+
+    $earlyReturn = $false
+
+    foreach ($comp in $project.VBComponents) {
+        if ($earlyReturn) { break }
+
+        $compType = [int]$comp.Type
+        # Skip UserForm (type 3)
+        if ($compType -eq 3) { continue }
+
+        $objType  = $null
+        $objName  = $null
+        $compName = $comp.Name
+
+        if ($compType -eq 1) {
+            # Standard module
+            if ('module' -notin $ScanTypes) { continue }
+            $objType = 'module'
+            $objName = $compName
+        }
+        elseif ($compName.StartsWith('Form_')) {
+            if ('form' -notin $ScanTypes) { continue }
+            $objType = 'form'
+            $objName = $compName.Substring(5)
+        }
+        elseif ($compName.StartsWith('Report_')) {
+            if ('report' -notin $ScanTypes) { continue }
+            $objType = 'report'
+            $objName = $compName.Substring(7)
+        }
+        else {
+            # Class module or other — treat as module
+            if ('module' -notin $ScanTypes) { continue }
+            $objType = 'module'
+            $objName = $compName
+        }
+
+        # Read code
+        $cm    = $comp.CodeModule
+        $total = $cm.CountOfLines
+        if ($total -eq 0) { continue }
+        $code  = $cm.Lines(1, $total)
+
+        # Join continuations
+        $joined = Join-VbaContinuations -Code $code
+
+        # --- State machine --------------------------------------------------------
+        $inProc     = $false
+        $inEnum     = $false
+        $inType     = $false
+        $curEnum    = $null
+        $curType    = $null
+
+        foreach ($entry in $joined) {
+            if ($earlyReturn) { break }
+
+            $physLine = $entry.Line
+            $text     = $entry.Text
+            $stripped = $text.Trim()
+
+            # Skip blank lines and comments
+            if (-not $stripped -or $stripped.StartsWith("'")) { continue }
+
+            # ---- Inside a procedure: skip until End Sub/Function/Property --------
+            if ($inProc) {
+                if ($rxEndProc.IsMatch($text)) { $inProc = $false }
+                continue
+            }
+
+            # ---- Procedure declaration -------------------------------------------
+            $m = $rxProc.Match($text)
+            if ($m.Success) {
+                $scope   = ($m.Groups[1].Value).Trim()
+                if (-not $scope) { $scope = $null }
+                $isStatic  = [bool]$m.Groups[2].Value
+                $keyword   = $m.Groups[4].Value
+                $procName  = $m.Groups[6].Value
+
+                if ($keyword -imatch '^Property') {
+                    $kind    = 'property'
+                    $subkind = $keyword
+                }
+                elseif ($keyword -ieq 'Sub') {
+                    $kind    = 'sub'
+                    $subkind = $null
+                }
+                else {
+                    $kind    = 'function'
+                    $subkind = $null
+                }
+
+                if ((& $nameMatch $procName) -and (-not $filterKinds -or $filterKinds.Contains($kind))) {
+                    $defn = [PSCustomObject][ordered]@{
+                        kind        = $kind
+                        object_type = $objType
+                        object_name = $objName
+                        line        = $physLine
+                        declaration = $stripped
+                        scope       = $scope
+                    }
+                    if ($isStatic) {
+                        $defn.scope = "Static$(if ($scope) { " $scope" })"
+                    }
+                    if ($subkind) {
+                        $defn | Add-Member -NotePropertyName subkind -NotePropertyValue $subkind
+                    }
+                    $defs.Add($defn)
+                    if ($FirstOnly) { $earlyReturn = $true; break }
+                }
+
+                $inProc = $true
+                continue
+            }
+
+            # ---- Enum block start ------------------------------------------------
+            $m = $rxEnum.Match($text)
+            if ($m.Success -and -not $inEnum) {
+                $scope    = ($m.Groups[1].Value).Trim()
+                if (-not $scope) { $scope = $null }
+                $enumName = $m.Groups[2].Value
+                $inEnum   = $true
+                $curEnum  = $enumName
+
+                if ((& $nameMatch $enumName) -and (-not $filterKinds -or $filterKinds.Contains('enum'))) {
+                    $defs.Add([PSCustomObject][ordered]@{
+                        kind        = 'enum'
+                        object_type = $objType
+                        object_name = $objName
+                        line        = $physLine
+                        declaration = $stripped
+                        scope       = $scope
+                    })
+                    if ($FirstOnly) { $earlyReturn = $true; break }
+                }
+                continue
+            }
+
+            # ---- Inside Enum block -----------------------------------------------
+            if ($inEnum) {
+                if ($rxEndEnum.IsMatch($text)) {
+                    $inEnum  = $false
+                    $curEnum = $null
+                    continue
+                }
+                # Enum member
+                $m = $rxEnumMem.Match($stripped)
+                if ($m.Success) {
+                    $memName = $m.Groups[1].Value
+                    $memVal  = ($m.Groups[3].Value).Trim()
+                    if (-not $memVal) { $memVal = $null }
+
+                    if ((& $nameMatch $memName) -and (-not $filterKinds -or $filterKinds.Contains('enum_member'))) {
+                        $defs.Add([PSCustomObject][ordered]@{
+                            kind        = 'enum_member'
+                            object_type = $objType
+                            object_name = $objName
+                            line        = $physLine
+                            declaration = $stripped
+                            scope       = $null
+                            parent_enum = $curEnum
+                            value       = $memVal
+                        })
+                        if ($FirstOnly) { $earlyReturn = $true; break }
+                    }
+                }
+                continue
+            }
+
+            # ---- Type block start ------------------------------------------------
+            $m = $rxType.Match($text)
+            if ($m.Success -and -not $inType) {
+                $scope    = ($m.Groups[1].Value).Trim()
+                if (-not $scope) { $scope = $null }
+                $typeName = $m.Groups[2].Value
+                $inType   = $true
+                $curType  = $typeName
+
+                if ((& $nameMatch $typeName) -and (-not $filterKinds -or $filterKinds.Contains('type'))) {
+                    $defs.Add([PSCustomObject][ordered]@{
+                        kind        = 'type'
+                        object_type = $objType
+                        object_name = $objName
+                        line        = $physLine
+                        declaration = $stripped
+                        scope       = $scope
+                    })
+                    if ($FirstOnly) { $earlyReturn = $true; break }
+                }
+                continue
+            }
+
+            # ---- Inside Type block -----------------------------------------------
+            if ($inType) {
+                if ($rxEndType.IsMatch($text)) {
+                    $inType  = $false
+                    $curType = $null
+                    continue
+                }
+                # Type field
+                $m = $rxTypeFld.Match($stripped)
+                if ($m.Success) {
+                    $fldName = $m.Groups[1].Value
+                    $asType  = ($m.Groups[3].Value).Trim()
+
+                    if ((& $nameMatch $fldName) -and (-not $filterKinds -or $filterKinds.Contains('type_field'))) {
+                        $defs.Add([PSCustomObject][ordered]@{
+                            kind        = 'type_field'
+                            object_type = $objType
+                            object_name = $objName
+                            line        = $physLine
+                            declaration = $stripped
+                            scope       = $null
+                            parent_type = $curType
+                            as_type     = $asType
+                        })
+                        if ($FirstOnly) { $earlyReturn = $true; break }
+                    }
+                }
+                continue
+            }
+
+            # ---- Const -----------------------------------------------------------
+            if ($rxConst.IsMatch($text)) {
+                $scopeM = $rxScopePfx.Match($text)
+                $scope  = if ($scopeM.Success) { $scopeM.Groups[1].Value } else { $null }
+                $afterConst = $rxConstAfter.Replace($text, '', 1)
+                $parts = Split-TopLevelCommas -Text $afterConst
+
+                foreach ($part in $parts) {
+                    if ($earlyReturn) { break }
+                    $cm2 = [regex]::Match($part, '(\w+)')
+                    if ($cm2.Success) {
+                        $constName = $cm2.Groups[1].Value
+                        $valM = [regex]::Match($part, '=\s*(.+)')
+                        $constVal = if ($valM.Success) { $valM.Groups[1].Value.Trim() } else { $null }
+
+                        if ((& $nameMatch $constName) -and (-not $filterKinds -or $filterKinds.Contains('const'))) {
+                            $defs.Add([PSCustomObject][ordered]@{
+                                kind        = 'const'
+                                object_type = $objType
+                                object_name = $objName
+                                line        = $physLine
+                                declaration = $stripped
+                                scope       = $scope
+                                value       = $constVal
+                            })
+                            if ($FirstOnly) { $earlyReturn = $true; break }
+                        }
+                    }
+                }
+                continue
+            }
+
+            # ---- Declare (Win32 API) ---------------------------------------------
+            $m = $rxDeclare.Match($text)
+            if ($m.Success) {
+                $scope    = ($m.Groups[1].Value).Trim()
+                if (-not $scope) { $scope = $null }
+                $subkind  = $m.Groups[3].Value
+                $declName = $m.Groups[4].Value
+
+                if ((& $nameMatch $declName) -and (-not $filterKinds -or $filterKinds.Contains('declare'))) {
+                    $defs.Add([PSCustomObject][ordered]@{
+                        kind        = 'declare'
+                        object_type = $objType
+                        object_name = $objName
+                        line        = $physLine
+                        declaration = $stripped
+                        scope       = $scope
+                        subkind     = $subkind
+                    })
+                    if ($FirstOnly) { $earlyReturn = $true; break }
+                }
+                continue
+            }
+
+            # ---- Variable (module-level only — in_proc is false here) ------------
+            $m = $rxVar.Match($text)
+            if ($m.Success) {
+                $varScope  = $m.Groups[1].Value
+                $afterScope = $rxScopeKw.Replace($text, '', 1)
+                $parts = Split-TopLevelCommas -Text $afterScope
+
+                foreach ($part in $parts) {
+                    if ($earlyReturn) { break }
+                    $vm = [regex]::Match($part, '(\w+)')
+                    if ($vm.Success) {
+                        $varName = $vm.Groups[1].Value
+                        $asM = [regex]::Match($part, '\bAs\s+(.+)', $rxOpts)
+                        $asType = if ($asM.Success) { $asM.Groups[1].Value.Trim() } else { $null }
+
+                        if ((& $nameMatch $varName) -and (-not $filterKinds -or $filterKinds.Contains('variable'))) {
+                            $defs.Add([PSCustomObject][ordered]@{
+                                kind        = 'variable'
+                                object_type = $objType
+                                object_name = $objName
+                                line        = $physLine
+                                declaration = $stripped
+                                scope       = $varScope
+                                as_type     = $asType
+                            })
+                            if ($FirstOnly) { $earlyReturn = $true; break }
+                        }
+                    }
+                }
+                continue
+            }
+        }
+    }
+
+    $out = [ordered]@{
+        symbol      = $Symbol
+        total       = $defs.Count
+        definitions = @($defs)
+    }
+    Format-AccessOutput -AsJson:$AsJson -Data $out
+}

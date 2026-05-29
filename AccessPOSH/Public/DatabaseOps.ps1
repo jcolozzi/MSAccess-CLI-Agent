@@ -1289,3 +1289,137 @@ function Invoke-AccessSQLBatch {
         [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($db)
     }
 }
+
+function Copy-AccessObject {
+    <#
+    .SYNOPSIS
+        Clone an Access object to a new name via SaveAsText -> LoadFromText.
+    .DESCRIPTION
+        Duplicates a query, form, report, macro, module or class_module by
+        performing a raw SaveAsText (preserving binary sections like PrtMip,
+        PrtDevMode, NameMap, GUID) followed by LoadFromText under the new name.
+    .PARAMETER DbPath
+        Path to .accdb/.mdb file. Defaults to the current session database.
+    .PARAMETER ObjectType
+        Type of Access object to clone.
+    .PARAMETER SourceName
+        Name of the existing object to copy from.
+    .PARAMETER TargetName
+        Name for the new cloned object.
+    .PARAMETER Overwrite
+        Delete the target object first if it already exists.
+    .PARAMETER AsJson
+        Return result as JSON string.
+    #>
+    [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
+    param(
+        [string]$DbPath,
+
+        [Parameter(Mandatory)]
+        [ValidateSet('query','form','report','macro','module','class_module')]
+        [string]$ObjectType,
+
+        [Parameter(Mandatory)]
+        [string]$SourceName,
+
+        [Parameter(Mandatory)]
+        [string]$TargetName,
+
+        [switch]$Overwrite,
+        [switch]$AsJson
+    )
+
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Copy-AccessObject'
+    $app    = Connect-AccessDB -DbPath $DbPath
+
+    # Map object type to acObjectType constant
+    $acTypeCode = if ($ObjectType -eq 'class_module') {
+        $script:AC_TYPE['module']
+    } else {
+        $script:AC_TYPE[$ObjectType]
+    }
+
+    # --- helper: check if object exists in the appropriate collection ---
+    $checkExists = {
+        param([string]$Name)
+        $collection = switch ($ObjectType) {
+            'form'          { $app.CurrentProject.AllForms   }
+            'report'        { $app.CurrentProject.AllReports }
+            { $_ -in 'module','class_module' } { $app.CurrentProject.AllModules }
+            'macro'         { $app.CurrentProject.AllMacros  }
+            'query'         { $app.CurrentData.AllQueries    }
+        }
+        $found = $false
+        foreach ($item in $collection) {
+            if ($item.Name -ieq $Name) { $found = $true; break }
+        }
+        $found
+    }
+
+    # Verify source exists
+    if (-not (& $checkExists $SourceName)) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.InvalidOperationException]::new(
+                    "Source $ObjectType '$SourceName' not found in database."
+                ),
+                'SourceNotFound',
+                [System.Management.Automation.ErrorCategory]::ObjectNotFound,
+                $SourceName
+            )
+        )
+    }
+
+    # Check if target already exists
+    $targetExisted = & $checkExists $TargetName
+    if ($targetExisted -and -not $Overwrite) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.InvalidOperationException]::new(
+                    "Target $ObjectType '$TargetName' already exists. Use -Overwrite to replace."
+                ),
+                'TargetExists',
+                [System.Management.Automation.ErrorCategory]::ResourceExists,
+                $TargetName
+            )
+        )
+    }
+
+    if (-not $PSCmdlet.ShouldProcess("$ObjectType '$SourceName' -> '$TargetName'", 'Clone')) {
+        return
+    }
+
+    # Raw SaveAsText to temp file (no binary stripping — binaries ride along)
+    $tmp = [System.IO.Path]::GetTempFileName()
+    try {
+        $app.SaveAsText($acTypeCode, $SourceName, $tmp)
+        $fileResult = Read-TempFile -Path $tmp
+        $text = $fileResult.Content
+    } finally {
+        if (Test-Path $tmp) { Remove-Item $tmp -Force -ErrorAction SilentlyContinue }
+    }
+
+    # For class_module: fix VB_Name attribute to reflect the target name
+    if ($ObjectType -eq 'class_module') {
+        $text = $text -replace '(?i)(Attribute\s+VB_Name\s*=\s*")([^"]*)"',
+                               "`${1}${TargetName}`""
+    }
+
+    # If overwriting, delete the existing target first
+    if ($targetExisted -and $Overwrite) {
+        $app.DoCmd.DeleteObject($acTypeCode, $TargetName)
+        Clear-AccessCaches
+    }
+
+    # Import under the new name via Set-AccessCode
+    $importType = if ($ObjectType -eq 'class_module') { 'module' } else { $ObjectType }
+    Set-AccessCode -DbPath $DbPath -ObjectType $importType -Name $TargetName -Code $text
+
+    Format-AccessOutput -AsJson:$AsJson -Data ([ordered]@{
+        action       = 'cloned'
+        object_type  = $ObjectType
+        source       = $SourceName
+        target       = $TargetName
+        overwritten  = [bool]($targetExisted -and $Overwrite)
+    })
+}

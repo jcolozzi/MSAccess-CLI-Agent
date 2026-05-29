@@ -161,3 +161,95 @@ function Get-ClosestMatchContext {
     $refSnippet = if ($ref.Length -gt 80) { $ref.Substring(0, 80) } else { $ref }
     return "Best match (${pct}% similar) near line $($bestIdx + 1) of '${ProcName}':`n$($contextLines -join "`n")`n  Looking for: '$refSnippet'"
 }
+
+function Join-VbaContinuations {
+    <#
+    .SYNOPSIS
+        Join VBA lines ending with ' _' (line continuation). Returns array of
+        [PSCustomObject]@{Line=[int]; Text=[string]} where Line is the 1-based
+        physical line number of the first line in the joined group.
+    .PARAMETER Code
+        Full VBA module text (CRLF or LF line endings).
+    #>
+    param(
+        [string]$Code
+    )
+
+    if (-not $Code) { return @() }
+    $lines = if ($Code.Contains("`r`n")) { $Code.Split("`r`n") } else { $Code.Split("`n") }
+    $result = [System.Collections.Generic.List[PSCustomObject]]::new()
+    $i = 0
+    while ($i -lt $lines.Count) {
+        $parts = [System.Collections.Generic.List[string]]::new()
+        $parts.Add($lines[$i].TrimEnd())
+        $firstLine = $i + 1  # 1-based
+        while ($i -lt $lines.Count - 1 -and $lines[$i].TrimEnd().EndsWith(' _')) {
+            # Remove trailing ' _' from current part
+            $parts[$parts.Count - 1] = $parts[$parts.Count - 1].Substring(0, $parts[$parts.Count - 1].Length - 2)
+            $i++
+            $parts.Add($lines[$i].Trim())
+        }
+        $joined = ($parts -join ' ')
+        $result.Add([PSCustomObject]@{ Line = [int]$firstLine; Text = $joined })
+        $i++
+    }
+    return @($result)
+}
+
+function Split-TopLevelCommas {
+    <#
+    .SYNOPSIS
+        Split a string by commas that are NOT inside parentheses or quoted strings.
+        VBA string escaping (doubled quotes) is respected.
+    .PARAMETER Text
+        The string to split (e.g. "A = 1, B = 2, C = Func(1, 2)").
+    #>
+    param(
+        [string]$Text
+    )
+
+    if (-not $Text) { return @() }
+    $parts   = [System.Collections.Generic.List[string]]::new()
+    $depth   = 0
+    $inStr   = $false
+    $current = [System.Text.StringBuilder]::new()
+    $i       = 0
+    $len     = $Text.Length
+
+    while ($i -lt $len) {
+        $ch = $Text[$i]
+        if ($ch -eq '"') {
+            # VBA escapes " as "" inside strings
+            if ($inStr -and ($i + 1) -lt $len -and $Text[$i + 1] -eq '"') {
+                [void]$current.Append('""')
+                $i += 2
+                continue
+            }
+            $inStr = -not $inStr
+            [void]$current.Append($ch)
+        }
+        elseif ($inStr) {
+            [void]$current.Append($ch)
+        }
+        elseif ($ch -eq '(') {
+            $depth++
+            [void]$current.Append($ch)
+        }
+        elseif ($ch -eq ')') {
+            $depth--
+            [void]$current.Append($ch)
+        }
+        elseif ($ch -eq ',' -and $depth -eq 0) {
+            $val = $current.ToString().Trim()
+            if ($val) { $parts.Add($val) }
+            [void]$current.Clear()
+        }
+        else {
+            [void]$current.Append($ch)
+        }
+        $i++
+    }
+    $val = $current.ToString().Trim()
+    if ($val) { $parts.Add($val) }
+    return @($parts)
+}
