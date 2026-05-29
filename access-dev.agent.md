@@ -185,7 +185,23 @@ Send-AccessReportToPrinter -DbPath $db -ReportName "rptSales" -WhereCondition "R
 Send-AccessReportToPrinter -DbPath $db -ReportName "rptSales" -PrintRange pages -FromPage 1 -ToPage 3 -AsJson
 ```
 
-## Available Functions (91 public)
+**Dependency graph:**
+```powershell
+# Generate graph.json + interactive HTML viewer
+Export-AccessGraph -DbPath $db
+
+# Return the graph object to the pipeline for inspection
+$graph = Export-AccessGraph -DbPath $db -PassThru
+$graph.nodes | Where-Object { $_.group -eq 'table' }
+
+# Include all table fields as nodes, keep raw SaveAsText exports
+Export-AccessGraph -DbPath $db -FieldNodeMode AllTableFields -RawExportMode Debug
+
+# Override session when AccessPOSH is connected to a different DB
+Export-AccessGraph -DbPath $db -Force
+```
+
+## Available Functions (96 public)
 
 | Category | Functions |
 |----------|-----------|
@@ -218,6 +234,7 @@ Send-AccessReportToPrinter -DbPath $db -ReportName "rptSales" -PrintRange pages 
 | **Application** | `Get-AccessApplicationInfo`, `Test-AccessRuntime`, `Get-AccessFileInfo` |
 | **Themes** | `Get-AccessTheme`, `Set-AccessTheme`, `Get-AccessThemeList` |
 | **Print** | `Export-AccessFilteredReport`, `Send-AccessReportToPrinter` |
+| **Graph** | `Export-AccessGraph` |
 
 ## Planning Workflows
 
@@ -245,7 +262,7 @@ Always check the skill for full guidance on clarifying questions, PRD structure,
 
 ## Naming & Reserved Words
 
-Always follow the naming guardrails in [vba-naming.instructions.md](../../.github/instructions/vba-naming.instructions.md) and the detailed skill in [access-vba-reserved-words SKILL.md](../../.github/skills/access-vba-reserved-words/SKILL.md).
+Always follow the naming guardrails in [vba-naming.instructions.md](../instructions/access/vba-naming.instructions.md) and the detailed skill in [access-vba-reserved-words SKILL.md](../skills/access-vba-reserved-words/SKILL.md).
 
 Key rules:
 - **Never** use VBA keywords, built-in function names, Access/DAO object names, or ACE/Jet SQL keywords as identifiers (variables, procedures, controls, fields, query columns, module names)
