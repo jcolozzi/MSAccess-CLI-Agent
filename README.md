@@ -5,7 +5,7 @@
 ![Platform: Windows](https://img.shields.io/badge/platform-Windows-blue?logo=windows)
 ![PowerShell: 5.1+](https://img.shields.io/badge/PowerShell-5.1%2B-blue?logo=powershell)
 ![VS Code](https://img.shields.io/badge/VS%20Code-GitHub%20Copilot%20Chat-blueviolet?logo=visual-studio-code)
-![Functions: 96](https://img.shields.io/badge/functions-96-brightgreen)
+![Functions: 108](https://img.shields.io/badge/functions-108-brightgreen)
 ![Module Version](https://img.shields.io/badge/version-1.0.0-orange)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 
@@ -18,7 +18,7 @@ You:   "Create a Customers table with ID (AutoNumber PK), Name (Text 100), and E
 Agent: → New-AccessTable → confirms success
 ```
 
-The **AccessPOSH** module (included) is a PowerShell port of [unmateria/MCP-Access](https://github.com/unmateria/MCP-Access), expanded to **96 public functions** covering databases, tables, forms, controls, VBA/VBE, SQL, reports, imports, security, UI automation, and dependency graph visualization.
+The **AccessPOSH** module (included) is a PowerShell port of [unmateria/MCP-Access](https://github.com/unmateria/MCP-Access), expanded to **108 public functions** covering databases, tables, forms, controls, VBA/VBE, SQL, reports, imports, security, UI automation, and dependency graph visualization.
 
 ## How it works
 
@@ -75,6 +75,9 @@ C:\Users\%USERNAME%\AppData\Roaming\Code\User\prompts\
 Copy both `.md` files into a `.github\agents\` folder in your workspace root. VS Code automatically detects any `.md` files in that folder as custom agents.
 
 > [!NOTE]
+> Helpful context goes here.
+
+> [!NOTE]
 > VS Code detects any `.md` files in the `.github/agents/` folder of your workspace as custom agents.
 
 ### 3 — Update the module path inside the agent files
@@ -109,6 +112,8 @@ In VS Code Copilot Chat, click the agent picker and choose **access-dev**. Open 
 | "Take a screenshot of the open form" | `Get-AccessScreenshot` |
 | "Import data from Customers.csv into the Customers table" | `Import-AccessFromCSV` |
 | "Generate a dependency graph for MyDB.accdb" | `Export-AccessGraph` |
+| "Show me the orphan tables in the graph" | `Get-AccessGraphOrphan` |
+| "What depends on the Customers table?" | `Get-AccessGraphImpact` |
 | "What would happen if I ran New-AccessTable? (dry run)" | `New-AccessTable -WhatIf` |
 
 ## Project structure
@@ -118,7 +123,7 @@ MSAccess-agent/
 ├── AccessPOSH/             # PowerShell module (the engine)
 │   ├── AccessPOSH.psd1     # Module manifest (v1.0.0, PS 5.1+, Desktop + Core)
 │   ├── AccessPOSH.psm1     # Module loader
-│   ├── Public/             # 18 files — one per command category
+│   ├── Public/             # 19 files — one per command category
 │   │   ├── DatabaseOps.ps1
 │   │   ├── TableOps.ps1
 │   │   ├── FormReportOps.ps1
@@ -147,7 +152,7 @@ Invoke-Pester .\Tests\ -Output Detailed
 ## Function reference
 
 <details>
-<summary><strong>View all 96 public functions</strong></summary>
+<summary><strong>View all 108 public functions</strong></summary>
 
 | Category | Functions |
 |---|---|
@@ -179,7 +184,7 @@ Invoke-Pester .\Tests\ -Output Detailed
 | **UI Automation** | `Get-AccessScreenshot`, `Send-AccessClick`, `Send-AccessKeyboard` |
 | **Print** | `Send-AccessReportToPrinter`, `Export-AccessFilteredReport` |
 | **Application** | `Get-AccessApplicationInfo`, `Test-AccessRuntime`, `Get-AccessFileInfo` |
-| **Graph** | `Export-AccessGraph` |
+| **Graph** | `Export-AccessGraph`, `Get-AccessGraphQuery`, `Import-AccessGraph`, `Get-AccessGraphNode`, `Get-AccessGraphEdge`, `Get-AccessGraphStats`, `Find-AccessGraphPath`, `Get-AccessGraphImpact`, `Get-AccessGraphOrphan` |
 | **Tips** | `Get-AccessTip` |
 
 </details>

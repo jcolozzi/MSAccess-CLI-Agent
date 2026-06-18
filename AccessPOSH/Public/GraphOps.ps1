@@ -328,6 +328,11 @@ function Export-AccessGraph {
                 $folder = if ($keepRaw) { Join-Path $rawDir 'modules' } else { [System.IO.Path]::GetTempPath() }
                 $rawInfo = Save-AccessTextObject -App $app -Type $AC_TYPE.Module -Name $name -Folder $folder
                 if (-not $keepRaw -and $rawInfo.path) { $tempPaths.Add($rawInfo.path) }
+
+                # Cache module code for cross-module call detection
+                if ($rawInfo.path -and (Test-Path -LiteralPath $rawInfo.path)) {
+                    $gs.ModuleCodeCache[$name] = Get-Content -LiteralPath $rawInfo.path -Raw
+                }
             }
 
             $nodeId = Get-GraphObjectId -Group 'module' -Name $name
@@ -401,6 +406,11 @@ function Export-AccessGraph {
                 $rawPath = $gs.NodeIndex[(Get-GraphObjectId -Group 'macro' -Name $name)].meta.rawPath
                 Add-GraphMacroHeuristicEdge -GraphState $gs -MacroName $name -RawPath $rawPath -SqlFolder $sqlFolder -KnownDataNames $knownDataNames
             }
+        }
+
+        # ── Build cross-module procedure index ──
+        if (-not $DisableCodeHeuristics) {
+            Build-GraphProcIndex -GraphState $gs
         }
 
         # ── Module code edges ──

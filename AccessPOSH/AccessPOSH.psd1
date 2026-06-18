@@ -151,6 +151,13 @@
         # Graph
         'Export-AccessGraph'
         'Get-AccessGraphQuery'
+        'Import-AccessGraph'
+        'Get-AccessGraphNode'
+        'Get-AccessGraphEdge'
+        'Get-AccessGraphStats'
+        'Find-AccessGraphPath'
+        'Get-AccessGraphImpact'
+        'Get-AccessGraphOrphan'
 
         # Ported from mcp_access v0.7.36
         'Copy-AccessObject'
