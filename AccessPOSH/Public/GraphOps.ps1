@@ -328,6 +328,11 @@ function Export-AccessGraph {
                 $folder = if ($keepRaw) { Join-Path $rawDir 'modules' } else { [System.IO.Path]::GetTempPath() }
                 $rawInfo = Save-AccessTextObject -App $app -Type $AC_TYPE.Module -Name $name -Folder $folder
                 if (-not $keepRaw -and $rawInfo.path) { $tempPaths.Add($rawInfo.path) }
+
+                # Cache module code for cross-module call detection
+                if ($rawInfo.path -and (Test-Path -LiteralPath $rawInfo.path)) {
+                    $gs.ModuleCodeCache[$name] = Get-Content -LiteralPath $rawInfo.path -Raw
+                }
             }
 
             $nodeId = Get-GraphObjectId -Group 'module' -Name $name
@@ -403,6 +408,11 @@ function Export-AccessGraph {
             }
         }
 
+        # ── Build cross-module procedure index ──
+        if (-not $DisableCodeHeuristics) {
+            Build-GraphProcIndex -GraphState $gs
+        }
+
         # ── Module code edges ──
         if (-not $DisableCodeHeuristics) {
             if (-not $Quiet) { Write-Progress -Activity 'Export-AccessGraph' -Status 'Analyzing module code...' -PercentComplete 90 }
@@ -476,4 +486,571 @@ function Export-AccessGraph {
             try { Remove-Item -LiteralPath $sqlFolder -Recurse -Force -ErrorAction SilentlyContinue } catch {}
         }
     }
+}
+
+# ──────────────────────────────────────────────────────────────────────
+#  Graph Query (ported from mcp_access/graph_query.py)
+# ──────────────────────────────────────────────────────────────────────
+
+function Get-AccessGraphQuery {
+    <#
+    .SYNOPSIS
+        Query a previously-generated Access dependency graph without re-scanning.
+
+    .DESCRIPTION
+        Loads graph.json (from Export-AccessGraph) and supports targeted queries:
+          neighbors — direct connections to/from a node (depth 1-3)
+          impact    — transitive downstream dependents
+          path      — shortest path between two nodes
+          orphans   — nodes with zero incoming edges
+          summary   — high-level stats, top edge kinds, high-degree nodes
+
+    .PARAMETER Action
+        Query action to perform.
+
+    .PARAMETER GraphPath
+        Path to graph.json. If omitted, auto-located next to DbPath.
+
+    .PARAMETER DbPath
+        Path to the Access database; used to locate graph.json if GraphPath not provided.
+
+    .PARAMETER Node
+        Node name or id for neighbors/impact (e.g. 'Customers' or 'table:Customers').
+
+    .PARAMETER Source
+        Source node for path action.
+
+    .PARAMETER Target
+        Target node for path action.
+
+    .PARAMETER Depth
+        BFS depth for neighbors (1-3). Default: 1.
+
+    .PARAMETER Direction
+        Edge direction for neighbors: in, out, or both. Default: both.
+
+    .PARAMETER Group
+        Filter by node group for summary (table, query, form, report, macro, module).
+
+    .PARAMETER IncludeFields
+        Include field-owner edges in results. By default they are excluded.
+
+    .PARAMETER AsJson
+        Emit output as a JSON string instead of a PSCustomObject.
+
+    .EXAMPLE
+        Get-AccessGraphQuery -Action summary -DbPath C:\MyApp.accdb
+
+    .EXAMPLE
+        Get-AccessGraphQuery -Action neighbors -GraphPath .\access-graph-out\graph.json -Node Customers -Depth 2
+
+    .EXAMPLE
+        Get-AccessGraphQuery -Action path -DbPath C:\MyApp.accdb -Source Customers -Target frmOrders
+
+    .EXAMPLE
+        Get-AccessGraphQuery -Action impact -DbPath C:\MyApp.accdb -Node tblProducts -AsJson
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [ValidateSet('neighbors','impact','path','orphans','summary')]
+        [string]$Action,
+
+        [string]$GraphPath,
+
+        [string]$DbPath,
+
+        [string]$Node,
+
+        [string]$Source,
+
+        [string]$Target,
+
+        [ValidateRange(1, 3)]
+        [int]$Depth = 1,
+
+        [ValidateSet('in','out','both')]
+        [string]$Direction = 'both',
+
+        [string]$Group,
+
+        [switch]$IncludeFields,
+
+        [switch]$AsJson
+    )
+
+    $MaxResults = 200
+    $skipFields = -not $IncludeFields
+
+    # ── Locate graph.json ──────────────────────────────────────────────
+    $resolvedPath = $GraphPath
+    if (-not $resolvedPath -and $DbPath) {
+        $dbDir = Split-Path ([System.IO.Path]::GetFullPath($DbPath)) -Parent
+        $candidate = Join-Path $dbDir 'access-graph-out' 'graph.json'
+        if (Test-Path -LiteralPath $candidate -PathType Leaf) {
+            $resolvedPath = $candidate
+        }
+    }
+    if (-not $resolvedPath -or -not (Test-Path -LiteralPath $resolvedPath -PathType Leaf)) {
+        $searched = if ($resolvedPath) { $resolvedPath } else { '(no path provided)' }
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.IO.FileNotFoundException]::new(
+                    "graph.json not found. Run Export-AccessGraph first. Searched: $searched"),
+                'GraphNotFound',
+                [System.Management.Automation.ErrorCategory]::ObjectNotFound,
+                $searched))
+    }
+
+    Write-Verbose "Loading graph from: $resolvedPath"
+    $graph = ConvertFrom-GraphJson -Path $resolvedPath
+
+    # ── Node resolver helper ───────────────────────────────────────────
+    function _MustResolve {
+        param([string]$Name, [string]$ParamName)
+        if ([string]::IsNullOrWhiteSpace($Name)) {
+            $PSCmdlet.ThrowTerminatingError(
+                [System.Management.Automation.ErrorRecord]::new(
+                    [System.ArgumentException]::new(
+                        "'$ParamName' is required for action '$Action'."),
+                    'MissingNodeParameter',
+                    [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                    $ParamName))
+        }
+        $hits = Resolve-GraphNode -Graph $graph -Name $Name
+        if ($hits.Count -eq 0) {
+            $PSCmdlet.ThrowTerminatingError(
+                [System.Management.Automation.ErrorRecord]::new(
+                    [System.ArgumentException]::new(
+                        "Node '$Name' not found in graph. Try the full id (e.g. 'table:Customers') or check spelling."),
+                    'NodeNotFound',
+                    [System.Management.Automation.ErrorCategory]::ObjectNotFound,
+                    $Name))
+        }
+        if ($hits.Count -gt 1) {
+            $options = ($hits | Select-Object -First 10 | ForEach-Object {
+                '{0} ({1})' -f $_.id, $_.group
+            }) -join ', '
+            $PSCmdlet.ThrowTerminatingError(
+                [System.Management.Automation.ErrorRecord]::new(
+                    [System.ArgumentException]::new(
+                        "'$Name' is ambiguous - matches: $options. Use the full id to disambiguate."),
+                    'AmbiguousNode',
+                    [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                    $Name))
+        }
+        return [string]$hits[0].id
+    }
+
+    # ── Compact formatters ─────────────────────────────────────────────
+    function _FmtNode {
+        param($N)
+        $out = [ordered]@{
+            id    = $N.id
+            label = $N.label
+            group = $N.group
+        }
+        if ($null -ne $N.meta) {
+            $metaObj = $N.meta
+            if ($metaObj -is [PSCustomObject]) {
+                if ($null -ne $metaObj.sqlPreview) { $out['sqlPreview'] = $metaObj.sqlPreview }
+                if ($null -ne $metaObj.fieldCount) { $out['fieldCount'] = $metaObj.fieldCount }
+            }
+            elseif ($metaObj -is [System.Collections.IDictionary]) {
+                if ($metaObj.ContainsKey('sqlPreview')) { $out['sqlPreview'] = $metaObj['sqlPreview'] }
+                if ($metaObj.ContainsKey('fieldCount')) { $out['fieldCount'] = $metaObj['fieldCount'] }
+            }
+        }
+        return [PSCustomObject]$out
+    }
+
+    function _FmtEdge {
+        param($E)
+        return [PSCustomObject][ordered]@{
+            from  = $E.from
+            to    = $E.to
+            kind  = $E.kind
+            label = $E.label
+        }
+    }
+
+    # ── Action: neighbors ──────────────────────────────────────────────
+    function _ActionNeighbors {
+        param([string]$NodeId, [int]$BfsDepth, [string]$Dir, [bool]$Skip)
+
+        $resultIn  = New-Object 'System.Collections.Generic.List[object]'
+        $resultOut = New-Object 'System.Collections.Generic.List[object]'
+
+        # BFS outgoing
+        if ($Dir -ieq 'out' -or $Dir -ieq 'both') {
+            $visited = New-Object 'System.Collections.Generic.HashSet[string]'
+            [void]$visited.Add($NodeId)
+            $frontier = New-Object 'System.Collections.Generic.Queue[object]'
+            $frontier.Enqueue([PSCustomObject]@{ Id = $NodeId; D = [int]0 })
+
+            while ($frontier.Count -gt 0) {
+                $item = $frontier.Dequeue()
+                $cur  = [string]$item.Id
+                $d    = [int]$item.D
+                if ($d -ge $BfsDepth) { continue }
+
+                if ($graph.OutAdj.ContainsKey($cur)) {
+                    foreach ($e in $graph.OutAdj[$cur]) {
+                        $tgt = [string]$e.to
+                        if ($Skip -and $e.kind -ieq 'field-owner') { continue }
+                        $fe = _FmtEdge $e
+                        $fe | Add-Member -NotePropertyName 'depth' -NotePropertyValue ($d + 1)
+                        $resultOut.Add($fe)
+                        if (-not $visited.Contains($tgt)) {
+                            [void]$visited.Add($tgt)
+                            $frontier.Enqueue([PSCustomObject]@{ Id = $tgt; D = ($d + 1) })
+                        }
+                    }
+                }
+            }
+        }
+
+        # BFS incoming
+        if ($Dir -ieq 'in' -or $Dir -ieq 'both') {
+            $visitedIn = New-Object 'System.Collections.Generic.HashSet[string]'
+            [void]$visitedIn.Add($NodeId)
+            $frontier = New-Object 'System.Collections.Generic.Queue[object]'
+            $frontier.Enqueue([PSCustomObject]@{ Id = $NodeId; D = [int]0 })
+
+            while ($frontier.Count -gt 0) {
+                $item = $frontier.Dequeue()
+                $cur  = [string]$item.Id
+                $d    = [int]$item.D
+                if ($d -ge $BfsDepth) { continue }
+
+                if ($graph.InAdj.ContainsKey($cur)) {
+                    foreach ($e in $graph.InAdj[$cur]) {
+                        $src = [string]$e.from
+                        if ($Skip -and $e.kind -ieq 'field-owner') { continue }
+                        $fe = _FmtEdge $e
+                        $fe | Add-Member -NotePropertyName 'depth' -NotePropertyValue ($d + 1)
+                        $resultIn.Add($fe)
+                        if (-not $visitedIn.Contains($src)) {
+                            [void]$visitedIn.Add($src)
+                            $frontier.Enqueue([PSCustomObject]@{ Id = $src; D = ($d + 1) })
+                        }
+                    }
+                }
+            }
+        }
+
+        $truncIn  = $resultIn.Count -gt $MaxResults
+        $truncOut = $resultOut.Count -gt $MaxResults
+
+        $inSlice  = @($resultIn  | Select-Object -First $MaxResults)
+        $outSlice = @($resultOut | Select-Object -First $MaxResults)
+
+        return [PSCustomObject][ordered]@{
+            action         = 'neighbors'
+            node           = (_FmtNode $graph.Nodes[$NodeId])
+            depth          = $BfsDepth
+            direction      = $Dir
+            incoming       = $inSlice
+            outgoing       = $outSlice
+            total_incoming = $resultIn.Count
+            total_outgoing = $resultOut.Count
+            truncated      = ($truncIn -or $truncOut)
+        }
+    }
+
+    # ── Action: impact ─────────────────────────────────────────────────
+    function _ActionImpact {
+        param([string]$NodeId, [bool]$Skip)
+
+        $visited  = New-Object 'System.Collections.Generic.HashSet[string]'
+        [void]$visited.Add($NodeId)
+        $frontier = New-Object 'System.Collections.Generic.Queue[string]'
+        $frontier.Enqueue($NodeId)
+        $affected  = New-Object 'System.Collections.Generic.List[object]'
+        $edgesUsed = New-Object 'System.Collections.Generic.List[object]'
+
+        while ($frontier.Count -gt 0) {
+            $cur = $frontier.Dequeue()
+            if ($graph.OutAdj.ContainsKey($cur)) {
+                foreach ($e in $graph.OutAdj[$cur]) {
+                    if ($Skip -and $e.kind -ieq 'field-owner') { continue }
+                    $tgt = [string]$e.to
+                    $edgesUsed.Add((_FmtEdge $e))
+                    if (-not $visited.Contains($tgt)) {
+                        [void]$visited.Add($tgt)
+                        $affected.Add((_FmtNode $graph.Nodes[$tgt]))
+                        $frontier.Enqueue($tgt)
+                    }
+                }
+            }
+            if ($affected.Count -ge $MaxResults) { break }
+        }
+
+        $truncated = $affected.Count -ge $MaxResults
+
+        # Group by type
+        $byGroup = @{}
+        foreach ($a in $affected) {
+            $grp = [string]$a.group
+            if (-not $byGroup.ContainsKey($grp)) {
+                $byGroup[$grp] = New-Object 'System.Collections.Generic.List[string]'
+            }
+            $byGroup[$grp].Add([string]$a.label)
+        }
+
+        return [PSCustomObject][ordered]@{
+            action           = 'impact'
+            node             = (_FmtNode $graph.Nodes[$NodeId])
+            affected_count   = $affected.Count
+            affected_by_group = $byGroup
+            affected         = @($affected | Select-Object -First $MaxResults)
+            edges            = @($edgesUsed | Select-Object -First $MaxResults)
+            truncated        = $truncated
+        }
+    }
+
+    # ── Action: path ───────────────────────────────────────────────────
+    function _ActionPath {
+        param([string]$SourceId, [string]$TargetId)
+
+        $srcNode = _FmtNode $graph.Nodes[$SourceId]
+        $tgtNode = _FmtNode $graph.Nodes[$TargetId]
+
+        if ($SourceId -ieq $TargetId) {
+            return [PSCustomObject][ordered]@{
+                action = 'path'
+                source = $srcNode
+                target = $tgtNode
+                found  = $true
+                path   = @($srcNode)
+                edges  = @()
+                length = 0
+            }
+        }
+
+        # Build undirected adjacency
+        $adj = @{}
+        foreach ($e in $graph.Edges) {
+            $fromId = [string]$e.from
+            $toId   = [string]$e.to
+            if (-not $adj.ContainsKey($fromId)) {
+                $adj[$fromId] = New-Object 'System.Collections.Generic.List[object]'
+            }
+            $adj[$fromId].Add([PSCustomObject]@{ Neighbor = $toId; Edge = $e })
+            if (-not $adj.ContainsKey($toId)) {
+                $adj[$toId] = New-Object 'System.Collections.Generic.List[object]'
+            }
+            $adj[$toId].Add([PSCustomObject]@{ Neighbor = $fromId; Edge = $e })
+        }
+
+        $visited = New-Object 'System.Collections.Generic.HashSet[string]'
+        [void]$visited.Add($SourceId)
+        $parent = @{}   # child → PSCustomObject(ParentId, Edge)
+        $frontier = New-Object 'System.Collections.Generic.Queue[string]'
+        $frontier.Enqueue($SourceId)
+        $found = $false
+
+        while ($frontier.Count -gt 0 -and -not $found) {
+            $cur = $frontier.Dequeue()
+            if ($adj.ContainsKey($cur)) {
+                foreach ($pair in $adj[$cur]) {
+                    $neighbor = [string]$pair.Neighbor
+                    $edge     = $pair.Edge
+                    if (-not $visited.Contains($neighbor)) {
+                        [void]$visited.Add($neighbor)
+                        $parent[$neighbor] = [PSCustomObject]@{ ParentId = $cur; Edge = $edge }
+                        if ($neighbor -ieq $TargetId) {
+                            $found = $true
+                            break
+                        }
+                        $frontier.Enqueue($neighbor)
+                    }
+                }
+            }
+        }
+
+        if (-not $found) {
+            return [PSCustomObject][ordered]@{
+                action = 'path'
+                source = $srcNode
+                target = $tgtNode
+                found  = $false
+                path   = @()
+                edges  = @()
+                length = -1
+            }
+        }
+
+        # Reconstruct path
+        $pathNodes = New-Object 'System.Collections.Generic.List[object]'
+        $pathEdges = New-Object 'System.Collections.Generic.List[object]'
+        $cur = $TargetId
+        while ($cur -ine $SourceId) {
+            $pathNodes.Add((_FmtNode $graph.Nodes[$cur]))
+            $pInfo = $parent[$cur]
+            $pathEdges.Add((_FmtEdge $pInfo.Edge))
+            $cur = [string]$pInfo.ParentId
+        }
+        $pathNodes.Add((_FmtNode $graph.Nodes[$SourceId]))
+        $pathNodes.Reverse()
+        $pathEdges.Reverse()
+
+        return [PSCustomObject][ordered]@{
+            action = 'path'
+            source = $srcNode
+            target = $tgtNode
+            found  = $true
+            path   = $pathNodes.ToArray()
+            edges  = $pathEdges.ToArray()
+            length = $pathEdges.Count
+        }
+    }
+
+    # ── Action: orphans ────────────────────────────────────────────────
+    function _ActionOrphans {
+        param([bool]$Skip)
+
+        $orphans = New-Object 'System.Collections.Generic.List[object]'
+        foreach ($nid in $graph.Nodes.Keys) {
+            $n = $graph.Nodes[$nid]
+            if ($Skip -and $n.group -ieq 'field') { continue }
+
+            $hasIncoming = $false
+            if ($graph.InAdj.ContainsKey($nid)) {
+                foreach ($e in $graph.InAdj[$nid]) {
+                    if ($Skip -and $e.kind -ieq 'field-owner') { continue }
+                    $hasIncoming = $true
+                    break
+                }
+            }
+
+            if (-not $hasIncoming) {
+                $orphans.Add((_FmtNode $n))
+            }
+        }
+
+        # Group by type
+        $byGroup = @{}
+        foreach ($o in $orphans) {
+            $grp = [string]$o.group
+            if (-not $byGroup.ContainsKey($grp)) {
+                $byGroup[$grp] = New-Object 'System.Collections.Generic.List[string]'
+            }
+            $byGroup[$grp].Add([string]$o.label)
+        }
+
+        return [PSCustomObject][ordered]@{
+            action    = 'orphans'
+            count     = $orphans.Count
+            by_group  = $byGroup
+            orphans   = @($orphans | Select-Object -First $MaxResults)
+            truncated = ($orphans.Count -gt $MaxResults)
+        }
+    }
+
+    # ── Action: summary ────────────────────────────────────────────────
+    function _ActionSummary {
+        param([string]$GroupFilter)
+
+        # Node counts by group
+        $nodeCounts = @{}
+        foreach ($n in $graph.Nodes.Values) {
+            $grp = [string]$n.group
+            if (-not $nodeCounts.ContainsKey($grp)) { $nodeCounts[$grp] = 0 }
+            $nodeCounts[$grp]++
+        }
+
+        # Edge counts by kind
+        $edgeCounts = @{}
+        foreach ($e in $graph.Edges) {
+            $kind = [string]$e.kind
+            if (-not $edgeCounts.ContainsKey($kind)) { $edgeCounts[$kind] = 0 }
+            $edgeCounts[$kind]++
+        }
+
+        # Degree analysis (combined in+out, excluding field-owner)
+        $degree = @{}
+        foreach ($e in $graph.Edges) {
+            if ($e.kind -ieq 'field-owner') { continue }
+            $fromId = [string]$e.from
+            $toId   = [string]$e.to
+            if (-not $degree.ContainsKey($fromId)) { $degree[$fromId] = 0 }
+            $degree[$fromId]++
+            if (-not $degree.ContainsKey($toId)) { $degree[$toId] = 0 }
+            $degree[$toId]++
+        }
+
+        # Top 15 by degree
+        $top = $degree.GetEnumerator() |
+            Sort-Object -Property Value -Descending |
+            Select-Object -First 15
+        $topNodes = New-Object 'System.Collections.Generic.List[object]'
+        foreach ($entry in $top) {
+            $n = $graph.Nodes[$entry.Key]
+            if ($null -eq $n) { continue }
+            if ($GroupFilter -and $n.group -ine $GroupFilter) { continue }
+            $fn = _FmtNode $n
+            $fn | Add-Member -NotePropertyName 'degree' -NotePropertyValue $entry.Value
+            $topNodes.Add($fn)
+        }
+
+        # Filter edge counts if group specified
+        $filteredEdgeCounts = $edgeCounts
+        if ($GroupFilter) {
+            $filteredEdgeCounts = @{}
+            foreach ($e in $graph.Edges) {
+                $src = $graph.Nodes[[string]$e.from]
+                $tgt = $graph.Nodes[[string]$e.to]
+                $srcGroup = if ($null -ne $src) { $src.group } else { '' }
+                $tgtGroup = if ($null -ne $tgt) { $tgt.group } else { '' }
+                if ($srcGroup -ieq $GroupFilter -or $tgtGroup -ieq $GroupFilter) {
+                    $kind = [string]$e.kind
+                    if (-not $filteredEdgeCounts.ContainsKey($kind)) { $filteredEdgeCounts[$kind] = 0 }
+                    $filteredEdgeCounts[$kind]++
+                }
+            }
+        }
+
+        $sortedEdges = @($filteredEdgeCounts.GetEnumerator() |
+            Sort-Object -Property Value -Descending |
+            ForEach-Object { [PSCustomObject]@{ kind = $_.Key; count = $_.Value } })
+
+        return [PSCustomObject][ordered]@{
+            action              = 'summary'
+            group_filter        = $GroupFilter
+            node_counts         = $nodeCounts
+            total_nodes         = $graph.Nodes.Count
+            total_edges         = $graph.Edges.Count
+            edge_kinds          = $sortedEdges
+            top_connected_nodes = @($topNodes | Select-Object -First 15)
+        }
+    }
+
+    # ── Dispatch ───────────────────────────────────────────────────────
+    $result = switch ($Action) {
+        'neighbors' {
+            $nid = _MustResolve -Name $Node -ParamName 'Node'
+            _ActionNeighbors -NodeId $nid -BfsDepth $Depth -Dir $Direction -Skip $skipFields
+        }
+        'impact' {
+            $nid = _MustResolve -Name $Node -ParamName 'Node'
+            _ActionImpact -NodeId $nid -Skip $skipFields
+        }
+        'path' {
+            $sid = _MustResolve -Name $Source -ParamName 'Source'
+            $tid = _MustResolve -Name $Target -ParamName 'Target'
+            _ActionPath -SourceId $sid -TargetId $tid
+        }
+        'orphans' {
+            _ActionOrphans -Skip $skipFields
+        }
+        'summary' {
+            _ActionSummary -GroupFilter $Group
+        }
+    }
+
+    if ($AsJson) {
+        return ($result | ConvertTo-Json -Depth 10 -Compress)
+    }
+    return $result
 }

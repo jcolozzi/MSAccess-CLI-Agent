@@ -3,6 +3,33 @@
 # All functions operate on a per-invocation $GraphState hashtable (no $script: pollution).
 # Ported from access-graph-starter/Export-AccessGraph.ps1 into AccessPOSH module.
 
+# Built-in VBA / Access function names — excluded from cross-module call detection.
+$script:VBA_BUILTIN_NAMES = [System.Collections.Generic.HashSet[string]]::new(
+    [string[]]@(
+        'asc','ascw','chr','chrw','format','instr','instrb','instrrev','join',
+        'lcase','left','len','lenb','ltrim','mid','replace','right','space',
+        'split','str','strcomp','strconv','strreverse','trim','rtrim','ucase','val','string',
+        'cbool','cbyte','ccur','cdate','cdbl','cdec','cint','clng','clnglng','clngptr','csng','cstr','cvar','cverr',
+        'isarray','isdate','isempty','iserror','ismissing','isnull','isnumeric','isobject','typename','vartype',
+        'abs','atn','cos','exp','fix','int','log','rnd','round','sgn','sin','sqr','tan',
+        'date','dateadd','datediff','datepart','dateserial','datevalue','day','formatdatetime',
+        'hour','minute','month','monthname','now','second','time','timeserial','timevalue','timer',
+        'weekday','weekdayname','year',
+        'inputbox','msgbox',
+        'curdir','dir','eof','filecopy','filedatetime','filelen','freefile','getattr','loc','lof','setattr',
+        'array','erase','filter','lbound','ubound',
+        'appactivate','beep','command','doevents','environ','sendkeys','shell',
+        'error',
+        'callbyname','createobject','getobject',
+        'deletesetting','getsetting','savesetting',
+        'hex','oct',
+        'choose','iif','nz','partition','qbcolor','randomize','rgb',
+        'davg','dcount','dfirst','dlast','dlookup','dmax','dmin','dstdev','dstdevp','dsum','dvar','dvarp',
+        'codedb','currentdb','currentuser','eval','guidfromstring','hyperlinkpart','stringfromguid','syscmd'
+    ),
+    [System.StringComparer]::OrdinalIgnoreCase
+)
+
 # ──────────────────────────────────────────────────────────────────────
 #  Graph State Factory
 # ──────────────────────────────────────────────────────────────────────
@@ -23,6 +50,9 @@ function New-GraphState {
         KnownTableFields = @{}
         Warnings        = New-Object 'System.Collections.Generic.List[object]'
         EdgeId          = 0
+        ProcIndex       = @{}
+        ProcCallRe      = $null
+        ModuleCodeCache = @{}
     }
 }
 
@@ -802,6 +832,29 @@ function Add-GraphFormReportEdge {
                 }
             }
         }
+
+        # RowSource (ComboBox / ListBox data binding)
+        if ($control.Properties.ContainsKey('RowSource')) {
+            $rsValue = [string]$control.Properties['RowSource']
+            if (-not [string]::IsNullOrWhiteSpace($rsValue)) {
+                $rsTargets = @(Get-GraphTargetsByName -Name $rsValue -TargetTable $GraphState.DataNameTargets)
+                if ($rsTargets.Count -gt 0) {
+                    Add-GraphEdge -GraphState $GraphState -From $objectId -To $rsTargets[0].id -Label 'RowSource' -Kind 'rowsource' -Arrows 'to' -Meta @{
+                        controlName = $controlName
+                        controlType = $controlType
+                        rowSource   = $rsValue
+                    }
+                }
+                elseif (Test-SqlText -Text $rsValue) {
+                    $rsSqlNode = New-GraphSqlNode -GraphState $GraphState -SqlText $rsValue -Origin ("RowSource:{0}" -f $controlName) -SqlFolder $SqlFolder
+                    Add-GraphEdge -GraphState $GraphState -From $objectId -To $rsSqlNode.id -Label 'RowSource' -Kind 'rowsource' -Arrows 'to' -Meta @{
+                        controlName = $controlName
+                        controlType = $controlType
+                    }
+                    Add-GraphSqlReferenceEdge -GraphState $GraphState -SqlText $rsValue -FromNodeId $rsSqlNode.id -RelationKind 'sql-reference' -SqlFolder $SqlFolder -KnownDataNames $KnownDataNames
+                }
+            }
+        }
     }
 
     if (-not $DisableCodeHeuristics) {
@@ -837,7 +890,8 @@ function Add-GraphCodeHeuristicEdge {
         @{ regex = '(?is)\bDoCmd\.OpenQuery\s+"(?<name>(?:[^"]|"")+)"';  group = 'query';  label = 'OpenQuery';  kind = 'vba-openquery' },
         @{ regex = '(?is)\bDoCmd\.OpenTable\s+"(?<name>(?:[^"]|"")+)"';  group = 'table';  label = 'OpenTable';  kind = 'vba-opentable' },
         @{ regex = '(?is)\bCurrentDb\s*\(\s*\)\s*\.\s*QueryDefs\s*\(\s*"(?<name>(?:[^"]|"")+)"\s*\)'; group = 'query'; label = 'QueryDefs'; kind = 'vba-querydefs' },
-        @{ regex = '(?is)\bDBEngine\s*\(\s*0\s*\)\s*\(\s*0\s*\)\s*\.\s*QueryDefs\s*\(\s*"(?<name>(?:[^"]|"")+)"\s*\)'; group = 'query'; label = 'QueryDefs'; kind = 'vba-querydefs' }
+        @{ regex = '(?is)\bDBEngine\s*\(\s*0\s*\)\s*\(\s*0\s*\)\s*\.\s*QueryDefs\s*\(\s*"(?<name>(?:[^"]|"")+)"\s*\)'; group = 'query'; label = 'QueryDefs'; kind = 'vba-querydefs' },
+        @{ regex = '(?is)\bDoCmd\.RunMacro\s+"(?<name>(?:[^"]|"")+)"'; group = 'macro'; label = 'RunMacro'; kind = 'vba-runmacro' }
     )
 
     foreach ($pattern in $patterns) {
@@ -918,6 +972,26 @@ function Add-GraphCodeHeuristicEdge {
                         $seenDataEdges[$edgeKey] = $true
                         Add-GraphEdge -GraphState $GraphState -From $OwnerNodeId -To $target.id -Label 'uses data' -Kind 'vba-data-ref' -Arrows 'to' -Meta @{ name = $name }
                     }
+                }
+            }
+        }
+    }
+
+    # Cross-module procedure calls (bare FuncName( or Call SubName)
+    if ($null -ne $GraphState.ProcCallRe) {
+        $seenCallEdges = @{}
+        foreach ($match in $GraphState.ProcCallRe.Matches($Text)) {
+            $matched = $match.Value
+            $procName = ($matched -replace '(?i)^\s*Call\s+', '').TrimEnd('( ')
+            $pnameLower = $procName.ToLowerInvariant()
+            $targetIds = $GraphState.ProcIndex[$pnameLower]
+            if ($null -eq $targetIds) { continue }
+            foreach ($tid in $targetIds) {
+                if ($tid -eq $OwnerNodeId) { continue }
+                $edgeKey = "$OwnerNodeId->$($tid):call:$pnameLower"
+                if (-not $seenCallEdges.ContainsKey($edgeKey)) {
+                    $seenCallEdges[$edgeKey] = $true
+                    Add-GraphEdge -GraphState $GraphState -From $OwnerNodeId -To $tid -Label 'calls' -Kind 'vba-call' -Arrows 'to' -Meta @{ procedure = $procName }
                 }
             }
         }
@@ -1035,6 +1109,80 @@ function Copy-GraphViewer {
     $embedTag = "<script>var EMBEDDED_GRAPH = $GraphJson;</script>"
     $html = $html -replace '<!-- EMBED_GRAPH_DATA -->', $embedTag
     Set-Content -LiteralPath (Join-Path $DestinationFolder 'index.html') -Value $html -Encoding UTF8
+}
+
+# ──────────────────────────────────────────────────────────────────────
+#  Cross-Module Procedure Call Index
+# ──────────────────────────────────────────────────────────────────────
+
+function Build-GraphProcIndex {
+    <#
+    .SYNOPSIS
+        Index all public VBA procedures across standalone modules for cross-module
+        call detection.  Populates GraphState.ProcIndex and GraphState.ProcCallRe.
+    #>
+    param(
+        [hashtable]$GraphState
+    )
+
+    $procDeclRe = '(?im)^\s*(?:Public\s+)?(?:Sub|Function|Property\s+(?:Get|Let|Set))\s+(\w+)'
+    $privateProcRe = '(?im)^\s*Private\s+(?:Sub|Function|Property\s+(?:Get|Let|Set))\s+(\w+)'
+
+    foreach ($node in $GraphState.NodeIndex.Values) {
+        if ($node.group -ne 'module') { continue }
+
+        $code = $null
+        if ($GraphState.ModuleCodeCache.ContainsKey($node.label)) {
+            $code = $GraphState.ModuleCodeCache[$node.label]
+        } else {
+            $rawPath = $null
+            if ($null -ne $node.meta) {
+                if ($node.meta -is [System.Collections.IDictionary]) {
+                    if ($node.meta.ContainsKey('rawPath')) { $rawPath = $node.meta['rawPath'] }
+                } elseif ($null -ne $node.meta.rawPath) {
+                    $rawPath = $node.meta.rawPath
+                }
+            }
+            if ($rawPath -and (Test-Path -LiteralPath $rawPath)) {
+                $code = Get-Content -LiteralPath $rawPath -Raw
+                $GraphState.ModuleCodeCache[$node.label] = $code
+            }
+        }
+
+        if ([string]::IsNullOrWhiteSpace($code)) { continue }
+
+        # Collect private procedure names to exclude
+        $privateNames = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+        foreach ($m in [regex]::Matches($code, $privateProcRe)) {
+            [void]$privateNames.Add($m.Groups[1].Value)
+        }
+
+        # Index all public procedures
+        $nodeId = $node.id
+        foreach ($m in [regex]::Matches($code, $procDeclRe)) {
+            $procName = $m.Groups[1].Value
+            $pnameLower = $procName.ToLowerInvariant()
+            if ($privateNames.Contains($procName)) { continue }
+            if ($script:VBA_BUILTIN_NAMES.Contains($pnameLower)) { continue }
+            if ($pnameLower.Length -lt 2) { continue }
+
+            if (-not $GraphState.ProcIndex.ContainsKey($pnameLower)) {
+                $GraphState.ProcIndex[$pnameLower] = New-Object 'System.Collections.Generic.List[string]'
+            }
+            $GraphState.ProcIndex[$pnameLower].Add($nodeId)
+        }
+    }
+
+    # Build compiled regex for call detection
+    $procNames = @($GraphState.ProcIndex.Keys | Sort-Object { $_.Length } -Descending)
+    if ($procNames.Count -gt 0) {
+        $escaped = $procNames | ForEach-Object { [regex]::Escape($_) }
+        $alt = $escaped -join '|'
+        $GraphState.ProcCallRe = [regex]::new(
+            "(?<![\.\w])(?:$alt)\s*\(|\bCall\s+(?:$alt)\b",
+            [System.Text.RegularExpressions.RegexOptions]::IgnoreCase
+        )
+    }
 }
 
 # ──────────────────────────────────────────────────────────────────────
