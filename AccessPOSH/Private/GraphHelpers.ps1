@@ -1036,3 +1036,180 @@ function Copy-GraphViewer {
     $html = $html -replace '<!-- EMBED_GRAPH_DATA -->', $embedTag
     Set-Content -LiteralPath (Join-Path $DestinationFolder 'index.html') -Value $html -Encoding UTF8
 }
+
+# ──────────────────────────────────────────────────────────────────────
+#  Graph Query Helpers (ported from mcp_access/graph_query.py)
+# ──────────────────────────────────────────────────────────────────────
+
+function ConvertFrom-GraphJson {
+    <#
+    .SYNOPSIS
+        Load a graph.json file and build adjacency lookup tables for querying.
+    .DESCRIPTION
+        Parses the JSON produced by Export-AccessGraph and returns a PSCustomObject
+        with node dictionaries, edge lists, and outgoing/incoming adjacency maps.
+        Used internally by Get-AccessGraphQuery.
+    .PARAMETER Path
+        Path to the graph.json file.
+    .OUTPUTS
+        PSCustomObject with properties: Nodes, Edges, OutAdj, InAdj, IdLookup, LabelLookup, Meta
+    #>
+    param(
+        [Parameter(Mandatory)]
+        [ValidateNotNullOrEmpty()]
+        [string]$Path
+    )
+
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        throw [System.IO.FileNotFoundException]::new(
+            "graph.json not found at: $Path. Run Export-AccessGraph first.", $Path)
+    }
+
+    $raw = Get-Content -LiteralPath $Path -Raw -Encoding UTF8
+    $data = ConvertFrom-Json $raw
+
+    # Node hashtable: id → node object
+    $nodes = @{}
+    # Case-insensitive lookups
+    $idLookup = @{}          # lowercase id → node
+    $labelLookup = @{}       # lowercase label → [List of nodes]
+    # Adjacency lists
+    $outAdj = @{}            # node id → [List of outgoing edges]
+    $inAdj  = @{}            # node id → [List of incoming edges]
+
+    # Index nodes
+    $nodeList = @()
+    if ($null -ne $data.nodes) { $nodeList = @($data.nodes) }
+    foreach ($n in $nodeList) {
+        $nid = [string]$n.id
+        $nodes[$nid] = $n
+        $idLookup[$nid.ToLower()] = $n
+
+        $labelKey = ([string]$n.label).ToLower()
+        if (-not $labelLookup.ContainsKey($labelKey)) {
+            $labelLookup[$labelKey] = New-Object 'System.Collections.Generic.List[object]'
+        }
+        $labelLookup[$labelKey].Add($n)
+    }
+
+    # Index edges
+    $edgeList = @()
+    if ($null -ne $data.edges) { $edgeList = @($data.edges) }
+    foreach ($e in $edgeList) {
+        $fromId = [string]$e.from
+        $toId   = [string]$e.to
+
+        if (-not $outAdj.ContainsKey($fromId)) {
+            $outAdj[$fromId] = New-Object 'System.Collections.Generic.List[object]'
+        }
+        $outAdj[$fromId].Add($e)
+
+        if (-not $inAdj.ContainsKey($toId)) {
+            $inAdj[$toId] = New-Object 'System.Collections.Generic.List[object]'
+        }
+        $inAdj[$toId].Add($e)
+    }
+
+    $meta = @{}
+    if ($null -ne $data.meta) {
+        $data.meta.PSObject.Properties | ForEach-Object { $meta[$_.Name] = $_.Value }
+    }
+
+    return [PSCustomObject]@{
+        Nodes       = $nodes
+        Edges       = $edgeList
+        OutAdj      = $outAdj
+        InAdj       = $inAdj
+        IdLookup    = $idLookup
+        LabelLookup = $labelLookup
+        Meta        = $meta
+    }
+}
+
+function Resolve-GraphNode {
+    <#
+    .SYNOPSIS
+        Resolve a user-supplied name to graph node(s).
+    .DESCRIPTION
+        Priority: exact id match → group:name probe → label match.
+        Returns an array of matching nodes (may be empty).
+    .PARAMETER Graph
+        Graph object returned by ConvertFrom-GraphJson.
+    .PARAMETER Name
+        User-supplied node name (e.g. 'Customers', 'table:Customers', 'frmMain').
+    #>
+    param(
+        [Parameter(Mandatory)]
+        [PSCustomObject]$Graph,
+
+        [Parameter(Mandatory)]
+        [string]$Name
+    )
+
+    $low = $Name.Trim().ToLower()
+    if ([string]::IsNullOrWhiteSpace($low)) { return @() }
+
+    # 1. Exact id match
+    if ($Graph.IdLookup.ContainsKey($low)) {
+        return @($Graph.IdLookup[$low])
+    }
+
+    # 2. Try group:name for all standard groups
+    $groups = @('table','query','form','report','macro','module','field','sql')
+    foreach ($g in $groups) {
+        $candidate = ('{0}:{1}' -f $g, $Name).ToLower()
+        if ($Graph.IdLookup.ContainsKey($candidate)) {
+            return @($Graph.IdLookup[$candidate])
+        }
+    }
+
+    # 3. Label match (case-insensitive)
+    if ($Graph.LabelLookup.ContainsKey($low)) {
+        $hits = $Graph.LabelLookup[$low]
+        if ($hits.Count -gt 0) {
+            return @($hits)
+        }
+    }
+
+    return @()
+}
+
+function Resolve-GraphInput {
+    <#
+    .SYNOPSIS
+        Resolve -Graph / -GraphPath / -DbPath to a loaded graph object.
+    .DESCRIPTION
+        Shared resolution logic for all graph query functions. Accepts a pre-loaded
+        graph object (from Import-AccessGraph), a file path, or a database path
+        (auto-locates access-graph-out/graph.json next to the DB).
+    #>
+    param(
+        [PSCustomObject]$Graph,
+        [string]$GraphPath,
+        [string]$DbPath
+    )
+
+    if ($null -ne $Graph -and $null -ne $Graph.Nodes) {
+        return $Graph
+    }
+
+    $resolvedPath = $GraphPath
+    if (-not $resolvedPath -and $DbPath) {
+        $dbDir = Split-Path ([System.IO.Path]::GetFullPath($DbPath)) -Parent
+        $candidate = Join-Path $dbDir 'access-graph-out' 'graph.json'
+        if (Test-Path -LiteralPath $candidate -PathType Leaf) {
+            $resolvedPath = $candidate
+        }
+    }
+
+    if (-not $resolvedPath -or -not (Test-Path -LiteralPath $resolvedPath -PathType Leaf)) {
+        $searched = if ($resolvedPath) { $resolvedPath } else { '(no path provided)' }
+        throw "graph.json not found. Run Export-AccessGraph first. Searched: $searched"
+    }
+
+    $result = ConvertFrom-GraphJson -Path $resolvedPath
+    if ($null -eq $result.Nodes -or $null -eq $result.Edges -or $null -eq $result.OutAdj -or $null -eq $result.InAdj) {
+        throw "Invalid graph structure from '$resolvedPath': missing required properties."
+    }
+    return $result
+}

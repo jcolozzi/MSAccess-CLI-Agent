@@ -1,11 +1,11 @@
 @{
     RootModule           = 'AccessPOSH.psm1'
-    ModuleVersion        = '1.0.0'
+    ModuleVersion        = '1.1.0'
     CompatiblePSEditions = @('Desktop', 'Core')
     GUID                 = '7f1d4798-d88f-4ad5-814e-3300dd53bf0b'
     Author               = 'Access-POSH'
     Copyright            = '(c) 2026 Access-POSH. All rights reserved.'
-    Description          = 'PowerShell Access Database Automation via COM — port of MCP-Access (91 tools)'
+    Description          = 'PowerShell Access Database Automation via COM — port of MCP-Access (96 tools)'
     PowerShellVersion    = '5.1'
 
     FunctionsToExport = @(
@@ -150,6 +150,20 @@
 
         # Graph
         'Export-AccessGraph'
+        'Get-AccessGraphQuery'
+        'Import-AccessGraph'
+        'Get-AccessGraphNode'
+        'Get-AccessGraphEdge'
+        'Get-AccessGraphStats'
+        'Find-AccessGraphPath'
+        'Get-AccessGraphImpact'
+        'Get-AccessGraphOrphan'
+
+        # Ported from mcp_access v0.7.36
+        'Copy-AccessObject'
+        'Search-AccessData'
+        'Set-AccessTabOrder'
+        'Find-AccessDefinition'
     )
 
     CmdletsToExport   = @()
