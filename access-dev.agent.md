@@ -201,7 +201,36 @@ Export-AccessGraph -DbPath $db -FieldNodeMode AllTableFields -RawExportMode Debu
 Export-AccessGraph -DbPath $db -Force
 ```
 
-## Available Functions (96 public)
+**Query a dependency graph:**
+```powershell
+# Load graph once, query many times
+$g = Import-AccessGraph -Path .\access-graph-out\graph.json
+
+# Filter nodes by group
+$g | Get-AccessGraphNode -Group table
+$g | Get-AccessGraphNode -Name "Cust*"
+
+# Filter edges
+$g | Get-AccessGraphEdge -Kind vba-openform
+$g | Get-AccessGraphEdge -NodeId "table:Customers"
+
+# Summary statistics
+$g | Get-AccessGraphStats
+
+# What depends on Customers? (downstream)
+$g | Get-AccessGraphImpact -NodeId "table:Customers"
+
+# What does frmMain depend on? (upstream)
+$g | Get-AccessGraphImpact -NodeId "form:frmMain" -Direction Upstream
+
+# Find shortest path between two nodes
+$g | Find-AccessGraphPath -From Customers -To frmOrders
+
+# Find unreferenced objects
+$g | Get-AccessGraphOrphan -Group table,query
+```
+
+## Available Functions (108 public)
 
 | Category | Functions |
 |----------|-----------|
@@ -234,7 +263,7 @@ Export-AccessGraph -DbPath $db -Force
 | **Application** | `Get-AccessApplicationInfo`, `Test-AccessRuntime`, `Get-AccessFileInfo` |
 | **Themes** | `Get-AccessTheme`, `Set-AccessTheme`, `Get-AccessThemeList` |
 | **Print** | `Export-AccessFilteredReport`, `Send-AccessReportToPrinter` |
-| **Graph** | `Export-AccessGraph` |
+| **Graph** | `Export-AccessGraph`, `Get-AccessGraphQuery`, `Import-AccessGraph`, `Get-AccessGraphNode`, `Get-AccessGraphEdge`, `Get-AccessGraphStats`, `Find-AccessGraphPath`, `Get-AccessGraphImpact`, `Get-AccessGraphOrphan` |
 
 ## Planning Workflows
 
