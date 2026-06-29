@@ -72,10 +72,7 @@ C:\Users\%USERNAME%\AppData\Roaming\Code\User\prompts\
 
 #### Option B — Workspace-level (scoped to this project)
 
-Copy both `.md` files into a `.github\agents\` folder in your workspace root. VS Code automatically detects any `.md` files in that folder as custom agents.
-
-> [!NOTE]
-> Helpful context goes here.
+Copy both `.md` files into a `.github\agents\` folder in your workspace root. 
 
 > [!NOTE]
 > VS Code detects any `.md` files in the `.github/agents/` folder of your workspace as custom agents.
