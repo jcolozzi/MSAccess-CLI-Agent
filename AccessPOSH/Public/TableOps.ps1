@@ -695,3 +695,229 @@ function Set-AccessIndex {
 
     Format-AccessOutput -AsJson:$AsJson -Data $result
 }
+
+function Search-AccessData {
+    <#
+    .SYNOPSIS
+        Full-text search across Text/Memo fields in local tables.
+    .DESCRIPTION
+        Searches all Text (type 10) and Memo (type 12) fields in local, non-system
+        tables for a substring match using Jet LIKE. Optionally filters by table name
+        and supports case-sensitive post-filtering.
+    .PARAMETER DbPath
+        Path to .accdb/.mdb file. Defaults to the current session database.
+    .PARAMETER SearchText
+        The text to search for (substring match).
+    .PARAMETER Tables
+        Optional list of table names to restrict the search to.
+    .PARAMETER MaxResultsPerTable
+        Maximum matches per table (default 50).
+    .PARAMETER MaxResultsTotal
+        Maximum matches across all tables (default 500).
+    .PARAMETER MatchCase
+        If set, filters out rows where the match is case-insensitive only.
+    .PARAMETER AsJson
+        Return results as JSON string.
+    #>
+    [CmdletBinding()]
+    param(
+        [string]$DbPath,
+
+        [Parameter(Mandatory)]
+        [ValidateNotNullOrEmpty()]
+        [string]$SearchText,
+
+        [string[]]$Tables,
+
+        [int]$MaxResultsPerTable = 50,
+
+        [int]$MaxResultsTotal = 500,
+
+        [switch]$MatchCase,
+
+        [switch]$AsJson
+    )
+
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Search-AccessData'
+    $app = Connect-AccessDB -DbPath $DbPath
+
+    # ── excerpt helper ──
+    $excerptAround = {
+        param([string]$Text, [string]$Needle, [int]$Ctx = 40)
+        if (-not $Text -or -not $Needle) { return ($Text ?? '') }
+        $idx = $Text.IndexOf($Needle, [System.StringComparison]::OrdinalIgnoreCase)
+        if ($idx -lt 0) { return $Text.Substring(0, [Math]::Min($Text.Length, $Ctx * 2)) }
+        $start = [Math]::Max(0, $idx - $Ctx)
+        $end   = [Math]::Min($Text.Length, $idx + $Needle.Length + $Ctx)
+        $prefix = if ($start -gt 0) { '...' } else { '' }
+        $suffix = if ($end -lt $Text.Length) { '...' } else { '' }
+        return "$prefix$($Text.Substring($start, $end - $start))$suffix"
+    }
+
+    $db = $null
+    try {
+        $db = $app.CurrentDb()
+        $safeNeedle = $SearchText.Replace("'", "''")
+
+        $results      = [System.Collections.Generic.List[object]]::new()
+        $totalMatches  = 0
+        $truncated     = $false
+
+        foreach ($td in $db.TableDefs) {
+            # stop early if global cap reached
+            if ($totalMatches -ge $MaxResultsTotal) {
+                $truncated = $true
+                break
+            }
+
+            $tName = $td.Name
+
+            # skip system / temp tables
+            if ($tName -like 'MSys*' -or $tName -like '~*') { continue }
+
+            # skip linked tables (non-empty Connect)
+            if ($td.Connect -and $td.Connect -ne '') { continue }
+
+            # filter to requested tables (case-insensitive)
+            if ($Tables -and $Tables.Count -gt 0) {
+                $match = $false
+                foreach ($t in $Tables) {
+                    if ($tName -ieq $t) { $match = $true; break }
+                }
+                if (-not $match) { continue }
+            }
+
+            # collect Text (10) and Memo (12) fields
+            $textFields = [System.Collections.Generic.List[string]]::new()
+            foreach ($fld in $td.Fields) {
+                if ($fld.Type -eq 10 -or $fld.Type -eq 12) {
+                    $textFields.Add($fld.Name)
+                }
+            }
+            if ($textFields.Count -eq 0) { continue }
+
+            # build WHERE clause
+            $clauses = [System.Collections.Generic.List[string]]::new()
+            foreach ($fn in $textFields) {
+                $safeFn = $fn.Replace(']', ']]')
+                $clauses.Add("[$safeFn] LIKE '*$safeNeedle*'")
+            }
+            $whereClause = $clauses -join ' OR '
+
+            $safeTable = $tName.Replace(']', ']]')
+            $perTableCap = [Math]::Min($MaxResultsPerTable, $MaxResultsTotal - $totalMatches)
+            if ($perTableCap -le 0) {
+                $truncated = $true
+                break
+            }
+
+            $sql = "SELECT TOP $($perTableCap + 1) * FROM [$safeTable] WHERE $whereClause"
+
+            $rs = $null
+            try {
+                $rs = $db.OpenRecordset($sql)
+            }
+            catch {
+                Write-Warning "Search-AccessData: skipping table '$tName': $_"
+                continue
+            }
+
+            if ($null -eq $rs -or $rs.EOF) {
+                if ($null -ne $rs) {
+                    $rs.Close()
+                    [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($rs)
+                }
+                continue
+            }
+
+            # read field names from the recordset
+            $fieldNames = [System.Collections.Generic.List[string]]::new()
+            for ($i = 0; $i -lt $rs.Fields.Count; $i++) {
+                $fieldNames.Add($rs.Fields.Item($i).Name)
+            }
+
+            $tableHits = [System.Collections.Generic.List[object]]::new()
+            $tableCount = 0
+
+            try {
+                while (-not $rs.EOF -and $tableCount -lt $perTableCap) {
+                    # read all fields into an ordered dict
+                    $row = [ordered]@{}
+                    foreach ($fn in $fieldNames) {
+                        $val = $rs.Fields.Item($fn).Value
+                        $row[$fn] = if ($null -eq $val) { $null } else { $val }
+                    }
+
+                    # determine which text fields matched
+                    $matchedFields = [System.Collections.Generic.List[string]]::new()
+                    $firstExcerpt  = ''
+
+                    foreach ($fn in $textFields) {
+                        $val = $row[$fn]
+                        if ($null -eq $val) { continue }
+                        $strVal = [string]$val
+
+                        if ($MatchCase) {
+                            if ($strVal.IndexOf($SearchText, [System.StringComparison]::Ordinal) -lt 0) {
+                                continue
+                            }
+                        }
+                        else {
+                            if ($strVal.IndexOf($SearchText, [System.StringComparison]::OrdinalIgnoreCase) -lt 0) {
+                                continue
+                            }
+                        }
+
+                        $matchedFields.Add($fn)
+                        if (-not $firstExcerpt) {
+                            $firstExcerpt = & $excerptAround $strVal $SearchText
+                        }
+                    }
+
+                    if ($matchedFields.Count -gt 0) {
+                        $row['_matched_fields'] = @($matchedFields)
+                        $row['_excerpt']        = $firstExcerpt
+                        $tableHits.Add($row)
+                        $tableCount++
+                    }
+
+                    $rs.MoveNext()
+                }
+            }
+            finally {
+                $rs.Close()
+                [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($rs)
+            }
+
+            if ($tableHits.Count -gt 0) {
+                $tableTruncated = $tableCount -ge $perTableCap
+                $results.Add([ordered]@{
+                    table     = $tName
+                    matches   = @($tableHits)
+                    count     = $tableHits.Count
+                    truncated = $tableTruncated
+                })
+                $totalMatches += $tableHits.Count
+                if ($totalMatches -ge $MaxResultsTotal) {
+                    $truncated = $true
+                }
+            }
+        }
+    }
+    finally {
+        if ($null -ne $db) {
+            [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($db)
+        }
+    }
+
+    $output = [ordered]@{
+        search_text     = $SearchText
+        match_case      = [bool]$MatchCase
+        total_matches   = $totalMatches
+        tables_with_hits = $results.Count
+        truncated       = $truncated
+        results         = @($results)
+    }
+
+    Format-AccessOutput -AsJson:$AsJson -Data $output
+}

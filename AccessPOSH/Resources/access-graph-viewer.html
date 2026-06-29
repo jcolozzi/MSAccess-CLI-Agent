@@ -326,6 +326,20 @@
     .detail-card .focus-btn:hover { background: var(--panel); }
     .detail-card .focus-btn.active { background: #0969da; color: #fff; border-color: #0969da; }
 
+    /* --- Filter toggle links --- */
+    .filter-toggle-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 6px;
+      font-size: 11px;
+    }
+    .filter-toggle-bar a {
+      cursor: pointer;
+      color: var(--link);
+      text-decoration: none;
+    }
+    .filter-toggle-bar a:hover { text-decoration: underline; }
+
     /* --- Edge filter section --- */
     .edge-filter-list {
       display: grid;
@@ -372,6 +386,131 @@
     [data-theme="dark"] .vis-button {
       filter: invert(1) hue-rotate(180deg);
     }
+
+    /* --- Reports panel --- */
+    .report-sub {
+      border-top: 1px solid var(--border);
+    }
+    .report-sub:first-child {
+      border-top: none;
+    }
+    .report-sub > summary {
+      padding: 9px 12px;
+      margin: 0;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      user-select: none;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--text);
+    }
+    .report-sub > summary::-webkit-details-marker { display: none; }
+    .report-sub > summary::after {
+      content: '\25B9';
+      font-size: 11px;
+      transition: transform 0.2s;
+      color: var(--muted);
+    }
+    .report-sub[open] > summary::after {
+      content: '\25BF';
+    }
+    .report-body {
+      padding: 0 12px 10px;
+    }
+    .report-disclaimer {
+      font-size: 11px;
+      color: var(--muted);
+      font-style: italic;
+      margin-bottom: 8px;
+      line-height: 1.4;
+    }
+    .report-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      margin-top: 4px;
+    }
+    .report-table th {
+      text-align: left;
+      padding: 4px 6px;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .report-table td {
+      padding: 4px 6px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+      word-break: break-word;
+    }
+    .report-table tr:last-child td {
+      border-bottom: none;
+    }
+    .report-table tr[data-node-id] {
+      cursor: pointer;
+    }
+    .report-table tr[data-node-id]:hover td {
+      background: var(--surface);
+    }
+    .report-badge {
+      display: inline-block;
+      padding: 1px 5px;
+      border-radius: 3px;
+      color: #fff;
+      font-size: 10px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .report-empty {
+      color: var(--muted);
+      font-size: 12px;
+      font-style: italic;
+      padding: 4px 0;
+    }
+    .report-showmore {
+      display: block;
+      margin-top: 6px;
+      font-size: 11px;
+      color: var(--muted);
+      cursor: pointer;
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 3px 8px;
+      width: 100%;
+      text-align: center;
+    }
+    .report-showmore:hover { background: var(--surface); }
+    .report-row-hidden { display: none; }
+
+    /* --- Pinned (click-to-keep) node popup --- */
+    #pinnedPopup {
+      position: absolute;
+      z-index: 20;
+      display: none;
+      max-width: 420px;
+    }
+    #pinnedPopup .pinned-close {
+      position: absolute;
+      top: 3px;
+      right: 3px;
+      z-index: 1;
+      width: 18px;
+      height: 18px;
+      padding: 0;
+      line-height: 16px;
+      border: none;
+      border-radius: 3px;
+      background: rgba(0, 0, 0, 0.28);
+      color: #fff;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    #pinnedPopup .pinned-close:hover { background: rgba(0, 0, 0, 0.5); }
   </style>
 </head>
 <body>
@@ -404,6 +543,7 @@
     <details class="panel" open>
       <summary>Filters</summary>
       <div class="panel-body">
+        <div class="filter-toggle-bar"><a id="groupSelectAll">Select all</a> <a id="groupDeselectAll">Deselect all</a></div>
         <div id="groupFilters" class="group-list"></div>
         <div class="hint">Only nodes with checked groups are shown. Edges are shown only when both endpoints are visible.</div>
       </div>
@@ -412,6 +552,7 @@
     <details class="panel" open>
       <summary>Edge Filters</summary>
       <div class="panel-body">
+        <div class="filter-toggle-bar"><a id="edgeSelectAll">Select all</a> <a id="edgeDeselectAll">Deselect all</a></div>
         <div id="edgeKindFilters" class="edge-filter-list"></div>
         <div class="hint">Toggle edge kinds. Nodes stay in place.</div>
       </div>
@@ -446,6 +587,52 @@
         <div id="details"><span style="color:var(--muted)">Nothing selected.</span></div>
       </div>
     </details>
+
+    <details class="panel" id="reportsPanel">
+      <summary>Reports</summary>
+      <div class="panel-body" style="padding:0">
+        <details class="report-sub" id="rpt-broken">
+          <summary>&#9888; Broken Objects</summary>
+          <div class="report-body" id="rpt-broken-body"><div class="report-empty">Load a graph to see results.</div></div>
+        </details>
+        <details class="report-sub" id="rpt-orphans">
+          <summary>Orphan Candidates</summary>
+          <div class="report-body" id="rpt-orphans-body"><div class="report-empty">Load a graph to see results.</div></div>
+        </details>
+        <details class="report-sub" id="rpt-sql">
+          <summary>Inline SQL Inventory</summary>
+          <div class="report-body" id="rpt-sql-body"><div class="report-empty">Load a graph to see results.</div></div>
+        </details>
+        <details class="report-sub" id="rpt-linked">
+          <summary>Linked Table Inventory</summary>
+          <div class="report-body" id="rpt-linked-body"><div class="report-empty">Load a graph to see results.</div></div>
+        </details>
+        <details class="report-sub" id="rpt-fanin">
+          <summary>High Fan-In Objects</summary>
+          <div class="report-body" id="rpt-fanin-body"><div class="report-empty">Load a graph to see results.</div></div>
+        </details>
+        <details class="report-sub" id="rpt-dupsql">
+          <summary>Duplicate Inline SQL</summary>
+          <div class="report-body" id="rpt-dupsql-body"><div class="report-empty">Load a graph to see results.</div></div>
+        </details>
+        <details class="report-sub" id="rpt-unverified">
+          <summary>Unverified Field Bindings</summary>
+          <div class="report-body" id="rpt-unverified-body"><div class="report-empty">Load a graph to see results.</div></div>
+        </details>
+        <details class="report-sub" id="rpt-cycles">
+          <summary>Circular Dependencies</summary>
+          <div class="report-body" id="rpt-cycles-body"><div class="report-empty">Load a graph to see results.</div></div>
+        </details>
+        <details class="report-sub" id="rpt-hotspots">
+          <summary>Complexity Hotspots</summary>
+          <div class="report-body" id="rpt-hotspots-body"><div class="report-empty">Load a graph to see results.</div></div>
+        </details>
+        <details class="report-sub" id="rpt-norel">
+          <summary>Tables Without Relationships</summary>
+          <div class="report-body" id="rpt-norel-body"><div class="report-empty">Load a graph to see results.</div></div>
+        </details>
+      </div>
+    </details>
   </aside>
 
   <!-- EMBED_GRAPH_DATA -->
@@ -463,6 +650,8 @@
       focusedNodeId: null,
       tooltipCache: new Map(),
       _stabilizeAndFreeze: false,
+      inboundIndex: null,
+      pinnedNodeId: null,
     };
 
     const groupStyles = {
@@ -501,6 +690,9 @@
       'macro-opentable':    { color: '#8250df', dashes: false, width: 1.5 },
       'macro-runsql':       { color: '#8250df', dashes: false, width: 1.5 },
       'vba-sourceobject':   { color: '#1a7f7a', dashes: [6, 3], width: 2 },
+      'vba-runmacro':       { color: '#8250df', dashes: false, width: 1.5 },
+      'vba-call':           { color: '#57606a', dashes: [4, 4], width: 1.5 },
+      'rowsource':          { color: '#bf8700', dashes: [6, 3], width: 1.5 },
       'field-owner':        { color: '#afb8c1', dashes: false, width: 1 },
     };
     const defaultEdgeStyle = { color: '#aaaaaa', dashes: false, width: 1 };
@@ -967,6 +1159,18 @@
         });
         container.appendChild(wrapper);
       }
+
+      // Select / Deselect all
+      document.getElementById('groupSelectAll').onclick = () => {
+        state.visibleGroups = new Set(groups);
+        container.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = true);
+        saveFilterState(); applyFilters();
+      };
+      document.getElementById('groupDeselectAll').onclick = () => {
+        state.visibleGroups.clear();
+        container.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false);
+        saveFilterState(); applyFilters();
+      };
     }
 
     function buildEdgeKindFilters(graph) {
@@ -1006,6 +1210,18 @@
         });
         container.appendChild(wrapper);
       }
+
+      // Select / Deselect all
+      document.getElementById('edgeSelectAll').onclick = () => {
+        state.visibleEdgeKinds = new Set(kinds);
+        container.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = true);
+        saveFilterState(); applyFilters();
+      };
+      document.getElementById('edgeDeselectAll').onclick = () => {
+        state.visibleEdgeKinds.clear();
+        container.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false);
+        saveFilterState(); applyFilters();
+      };
     }
 
     function normalizeNode(node) {
@@ -1081,6 +1297,61 @@
       return opts;
     }
 
+    // ─── Pinned node popup (click a node to keep its tooltip open) ───
+    // vis-network rewrites the #network container on init, so the popup is
+    // created on demand and re-appended whenever it is missing.
+
+    function getPinnedPopup() {
+      let popup = document.getElementById('pinnedPopup');
+      if (!popup) {
+        popup = document.createElement('div');
+        popup.id = 'pinnedPopup';
+        (document.getElementById('network') || document.body).appendChild(popup);
+      }
+      return popup;
+    }
+
+    function positionPinnedPopup() {
+      if (!state.pinnedNodeId || !state.network) return;
+      const popup = document.getElementById('pinnedPopup');
+      if (!popup || popup.style.display === 'none') return;
+      const pos = state.network.getPositions([state.pinnedNodeId])[state.pinnedNodeId];
+      if (!pos) return;
+      const dom = state.network.canvasToDOM(pos);
+      const container = document.getElementById('network');
+      const cw = container.clientWidth, ch = container.clientHeight;
+      const pw = popup.offsetWidth || 280, ph = popup.offsetHeight || 160;
+      let left = dom.x + 14, top = dom.y + 14;
+      if (left + pw > cw) left = dom.x - pw - 14;
+      if (top + ph > ch) top = ch - ph - 4;
+      popup.style.left = Math.max(4, left) + 'px';
+      popup.style.top = Math.max(4, top) + 'px';
+    }
+
+    function showPinnedPopup(nodeId) {
+      const tip = buildNodeTooltip(nodeId);
+      if (!tip) { hidePinnedPopup(); return; }
+      const popup = getPinnedPopup();
+      popup.innerHTML = '';
+      const close = document.createElement('button');
+      close.className = 'pinned-close';
+      close.type = 'button';
+      close.title = 'Close';
+      close.innerHTML = '\u2715';
+      close.addEventListener('click', hidePinnedPopup);
+      popup.appendChild(close);
+      popup.appendChild(tip.cloneNode(true));
+      popup.style.display = 'block';
+      state.pinnedNodeId = nodeId;
+      positionPinnedPopup();
+    }
+
+    function hidePinnedPopup() {
+      const popup = document.getElementById('pinnedPopup');
+      if (popup) { popup.style.display = 'none'; popup.innerHTML = ''; }
+      state.pinnedNodeId = null;
+    }
+
     function createNetwork() {
       const container = document.getElementById('network');
       state.nodesDataSet = new vis.DataSet([]);
@@ -1094,14 +1365,20 @@
       state.network.on('click', params => {
         if (params.nodes.length) {
           showNodeDetails(params.nodes[0]);
+          showPinnedPopup(params.nodes[0]);
           return;
         }
         if (params.edges.length) {
           showEdgeDetails(params.edges[0]);
+          hidePinnedPopup();
           return;
         }
         showDefaultDetails();
+        hidePinnedPopup();
       });
+
+      // Keep the pinned popup glued to its node as the view pans / zooms / animates.
+      state.network.on('afterDrawing', () => positionPinnedPopup());
 
       state.network.on('doubleClick', params => {
         if (params.nodes.length) {
@@ -1229,6 +1506,7 @@
       state.graph = graph;
       state.tooltipCache.clear();
       state.focusedNodeId = null;
+      hidePinnedPopup();
 
       // Enable physics temporarily for stabilization, then auto-freeze
       state.physicsEnabled = true;
@@ -1241,6 +1519,9 @@
       buildEdgeKindFilters(graph);
       applyFilters();
       showDefaultDetails();
+      const idx = buildInboundIndex(graph);
+      state.inboundIndex = idx;
+      renderReports(graph, idx);
     }
 
     async function tryLoadDefaultGraph() {
@@ -1298,6 +1579,437 @@
       state.network.fit({ nodes: matches, animation: true });
       setStatus(`Matched ${matches.length} visible node(s).`);
     }
+
+    // ─── Reports panel ───
+
+    function buildInboundIndex(graph) {
+      const idx = new Map();
+      for (const node of graph.nodes) idx.set(node.id, []);
+      for (const edge of graph.edges) {
+        const list = idx.get(edge.to);
+        if (list) list.push(edge);
+      }
+      return idx;
+    }
+
+    function reportGroupBadge(group) {
+      return `<span class="report-badge" style="background:${groupColor(group)}">${escapeHtml(group)}</span>`;
+    }
+
+    function setReportSummary(subId, text) {
+      const sub = document.getElementById(subId);
+      if (sub) { const s = sub.querySelector(':scope > summary'); if (s) s.textContent = text; }
+    }
+
+    function renderBrokenObjects(graph) {
+      const body = document.getElementById('rpt-broken-body');
+      if (!body) return;
+      const warnings = (graph.meta && graph.meta.warnings) ? graph.meta.warnings : [];
+      setReportSummary('rpt-broken', '⚠ Broken Objects (' + warnings.length + ')');
+      if (!warnings.length) {
+        body.innerHTML = '<div class="report-empty">No warnings — all object references resolved cleanly.</div>';
+        return;
+      }
+      let html = '<table class="report-table"><thead><tr><th>Code</th><th>Object</th><th>Message</th></tr></thead><tbody>';
+      for (const w of warnings) {
+        const code  = escapeHtml(String(w.code || ''));
+        const owner = escapeHtml(String((w.meta && w.meta.owner) || ''));
+        const grp   = escapeHtml(String((w.meta && w.meta.group) || ''));
+        const msg   = escapeHtml(String(w.message || ''));
+        html += `<tr><td style="white-space:nowrap">${code}</td>` +
+                `<td>${grp ? `<span style="color:var(--muted);font-size:10px">${grp} › </span>` : ''}${owner}</td>` +
+                `<td style="font-size:11px">${msg}</td></tr>`;
+      }
+      html += '</tbody></table>';
+      body.innerHTML = html;
+    }
+
+    function renderOrphans(graph, inboundIndex) {
+      const body = document.getElementById('rpt-orphans-body');
+      if (!body) return;
+      const orphans = graph.nodes.filter(n => n.group !== 'field' && (inboundIndex.get(n.id) || []).length === 0);
+      setReportSummary('rpt-orphans', 'Orphan Candidates (' + orphans.length + ')');
+      let html = '<div class="report-disclaimer">These objects have no inbound references in the graph. ' +
+        'They are <strong>candidates to investigate</strong>, not confirmed unused. ' +
+        'The extractor captures references via SQL analysis, VBA string-literal scanning, DoCmd calls, ' +
+        'RecordSource and RowSource bindings, and macro actions — but runtime-built references ' +
+        'or code patterns outside that scope may not appear. ' +
+        '<strong>Known false positives:</strong> the AutoExec macro (run automatically by Access on database open) ' +
+        'and objects invoked directly from the Access ribbon will always appear here regardless of actual use.</div>';
+      if (!orphans.length) {
+        html += '<div class="report-empty">No orphan candidates found.</div>';
+        body.innerHTML = html;
+        return;
+      }
+      const byGroup = {};
+      for (const n of orphans) {
+        if (!byGroup[n.group]) byGroup[n.group] = [];
+        byGroup[n.group].push(n);
+      }
+      html += '<table class="report-table"><thead><tr><th>Group</th><th>Name</th></tr></thead><tbody>';
+      for (const grp of Object.keys(byGroup).sort()) {
+        for (const n of byGroup[grp]) {
+          html += `<tr data-node-id="${escapeHtml(n.id)}"><td>${reportGroupBadge(grp)}</td><td>${escapeHtml(safeString(n.label))}</td></tr>`;
+        }
+      }
+      html += '</tbody></table>';
+      body.innerHTML = html;
+    }
+
+    function renderInlineSQL(graph) {
+      const body = document.getElementById('rpt-sql-body');
+      if (!body) return;
+      const sqlNodes = graph.nodes.filter(n => n.group === 'sql');
+      setReportSummary('rpt-sql', 'Inline SQL Inventory (' + sqlNodes.length + ')');
+      if (!sqlNodes.length) {
+        body.innerHTML = '<div class="report-empty">No inline SQL nodes — all queries are named objects.</div>';
+        return;
+      }
+      let html = '<div class="report-disclaimer">These SQL statements are embedded directly in form/report RecordSources, ' +
+        'RowSources, or VBA code rather than stored as named saved queries. Inline SQL is a maintenance liability: ' +
+        'it is hidden inside individual objects, cannot be tested or reused independently, and requires opening each ' +
+        'form or module to find and modify. These are <strong>candidates to extract and save as named queries.</strong></div>' +
+        '<table class="report-table"><thead><tr><th>Origin</th><th>SQL Preview</th></tr></thead><tbody>';
+      for (const n of sqlNodes) {
+        const meta    = n.meta || {};
+        const origin  = escapeHtml(String(meta.origin || ''));
+        const preview = escapeHtml(String(meta.preview || '').substring(0, 120));
+        html += `<tr data-node-id="${escapeHtml(n.id)}">` +
+                `<td style="white-space:nowrap;font-size:11px;color:var(--muted)">${origin}</td>` +
+                `<td style="font-family:Consolas,Menlo,monospace;font-size:11px">${preview}</td></tr>`;
+      }
+      html += '</tbody></table>';
+      body.innerHTML = html;
+    }
+
+    function renderLinkedTables(graph) {
+      const body = document.getElementById('rpt-linked-body');
+      if (!body) return;
+      const linked = graph.nodes
+        .filter(n => n.group === 'table' && n.meta && n.meta.connect)
+        .sort((a, b) => String(a.meta.connect).localeCompare(String(b.meta.connect)));
+      setReportSummary('rpt-linked', 'Linked Table Inventory (' + linked.length + ')');
+      if (!linked.length) {
+        body.innerHTML = '<div class="report-empty">No linked tables — all tables are local.</div>';
+        return;
+      }
+      let html = '<table class="report-table"><thead><tr><th>Local Name</th><th>Backend / Source</th><th style="text-align:right">Fields</th></tr></thead><tbody>';
+      for (const n of linked) {
+        const meta    = n.meta || {};
+        const dbMatch = String(meta.connect || '').match(/DATABASE=([^;]+)/i);
+        const backend = escapeHtml(dbMatch ? dbMatch[1] : String(meta.connect || ''));
+        const src     = escapeHtml(String(meta.sourceTable || ''));
+        const fields  = meta.fieldCount != null ? meta.fieldCount : '';
+        html += `<tr data-node-id="${escapeHtml(n.id)}">` +
+                `<td>${escapeHtml(safeString(n.label))}</td>` +
+                `<td style="font-size:11px">${backend}${src ? `<br><span style="color:var(--text);font-weight:600">${src}</span>` : ''}</td>` +
+                `<td style="text-align:right">${fields}</td></tr>`;
+      }
+      html += '</tbody></table>';
+      body.innerHTML = html;
+    }
+
+    function renderHighFanIn(graph, inboundIndex) {
+      const body = document.getElementById('rpt-fanin-body');
+      if (!body) return;
+      const SHOW_INITIAL = 15;
+      const ranked = graph.nodes
+        .filter(n => n.group !== 'field')
+        .map(n => ({ node: n, count: (inboundIndex.get(n.id) || []).length }))
+        .filter(x => x.count > 0)
+        .sort((a, b) => b.count - a.count);
+      setReportSummary('rpt-fanin', 'High Fan-In Objects (' + ranked.length + ')');
+      if (!ranked.length) {
+        body.innerHTML = '<div class="report-empty">No objects with inbound references found.</div>';
+        return;
+      }
+      let html = '<div class="report-disclaimer">Objects ranked by how many other objects depend on them (inbound edge count). ' +
+        'A high fan-in object is the highest-risk thing to change: renaming a table, altering a query\'s fields, ' +
+        'or removing a module procedure can break every dependent listed below. ' +
+        'Review this list before making any structural change to the database.</div>' +
+        '<table class="report-table"><thead><tr><th>Group</th><th>Name</th><th style="text-align:right">In</th></tr></thead><tbody>';
+      for (let i = 0; i < ranked.length; i++) {
+        const { node: n, count } = ranked[i];
+        const overflow = i >= SHOW_INITIAL ? ' class="report-row-hidden" data-overflow="1"' : '';
+        html += `<tr data-node-id="${escapeHtml(n.id)}"${overflow}>` +
+                `<td>${reportGroupBadge(n.group)}</td>` +
+                `<td>${escapeHtml(safeString(n.label))}</td>` +
+                `<td style="text-align:right;font-weight:600">${count}</td></tr>`;
+      }
+      html += '</tbody></table>';
+      if (ranked.length > SHOW_INITIAL) {
+        html += `<button class="report-showmore" data-target="rpt-fanin-body" data-total="${ranked.length}" data-expanded="0">Show all ${ranked.length} objects</button>`;
+      }
+      body.innerHTML = html;
+    }
+
+    function nodeMap(graph) {
+      const m = new Map();
+      for (const n of graph.nodes) m.set(n.id, n);
+      return m;
+    }
+
+    function renderDuplicateSql(graph, inboundIndex) {
+      const body = document.getElementById('rpt-dupsql-body');
+      if (!body) return;
+      const byId = nodeMap(graph);
+      const dups = graph.nodes
+        .filter(n => n.group === 'sql')
+        .map(n => ({ node: n, consumers: [...new Set((inboundIndex.get(n.id) || []).map(e => e.from))] }))
+        .filter(x => x.consumers.length >= 2)
+        .sort((a, b) => b.consumers.length - a.consumers.length);
+      setReportSummary('rpt-dupsql', 'Duplicate Inline SQL (' + dups.length + ')');
+      if (!dups.length) {
+        body.innerHTML = '<div class="report-empty">No inline SQL statement is reused across 2+ objects.</div>';
+        return;
+      }
+      let html = '<div class="report-disclaimer">Identical inline SQL statements (matched by content hash) that appear in two or more places. ' +
+        'Each is a single saved query waiting to happen: consolidating them removes copy-paste drift and gives one place to test and tune. ' +
+        'These are the strongest "save as a named query" candidates.</div>' +
+        '<table class="report-table"><thead><tr><th style="text-align:right">Uses</th><th>SQL Preview &amp; Consumers</th></tr></thead><tbody>';
+      for (const { node: n, consumers } of dups) {
+        const meta = n.meta || {};
+        const preview = escapeHtml(String(meta.preview || '').substring(0, 120));
+        const names = consumers.map(id => {
+          const c = byId.get(id);
+          return c ? `${reportGroupBadge(c.group)} ${escapeHtml(safeString(c.label))}` : escapeHtml(id);
+        }).join(' ');
+        html += `<tr data-node-id="${escapeHtml(n.id)}">` +
+                `<td style="text-align:right;font-weight:600">${consumers.length}</td>` +
+                `<td><div style="font-family:Consolas,Menlo,monospace;font-size:11px">${preview}</div>` +
+                `<div style="margin-top:3px">${names}</div></td></tr>`;
+      }
+      html += '</tbody></table>';
+      body.innerHTML = html;
+    }
+
+    function renderUnverifiedFields(graph, inboundIndex) {
+      const body = document.getElementById('rpt-unverified-body');
+      if (!body) return;
+      const byId = nodeMap(graph);
+      const SHOW_INITIAL = 15;
+      const fields = graph.nodes
+        .filter(n => n.group === 'field' && n.meta && n.meta.verified === false)
+        .sort((a, b) => safeString((a.meta || {}).ownerName).localeCompare(safeString((b.meta || {}).ownerName)));
+      setReportSummary('rpt-unverified', 'Unverified Field Bindings (' + fields.length + ')');
+      if (!fields.length) {
+        body.innerHTML = '<div class="report-empty">No unverified field bindings.</div>';
+        return;
+      }
+      let html = '<div class="report-disclaimer">Field bindings the extractor could <strong>not</strong> confirm against a base table\u2019s column list. ' +
+        'A binding is only "verified" when its source resolves to a real table field, so this list also includes every field pulled from a ' +
+        'query or inline SQL RecordSource \u2014 those are <strong>expected</strong>, not errors. ' +
+        'Focus on rows whose source is a <em>table</em>: those usually mean a misspelled field name or a deleted/renamed column.</div>' +
+        '<table class="report-table"><thead><tr><th>Field</th><th>Source</th><th>Referenced By</th></tr></thead><tbody>';
+      for (let i = 0; i < fields.length; i++) {
+        const n = fields[i];
+        const meta = n.meta || {};
+        const owner = escapeHtml(safeString(meta.ownerName));
+        const ownerGroup = safeString(meta.ownerGroup);
+        const refs = (inboundIndex.get(n.id) || [])
+          .filter(e => e.kind === 'controlsource')
+          .map(e => {
+            const src = byId.get(e.from);
+            const ctl = (e.meta && e.meta.controlName) ? ' \u00b7 ' + escapeHtml(String(e.meta.controlName)) : '';
+            return (src ? escapeHtml(safeString(src.label)) : escapeHtml(e.from)) + ctl;
+          });
+        const refsText = refs.length ? refs.join('<br>') : '<span style="color:var(--muted)">\u2014</span>';
+        const overflow = i >= SHOW_INITIAL ? ' class="report-row-hidden" data-overflow="1"' : '';
+        html += `<tr data-node-id="${escapeHtml(n.id)}"${overflow}>` +
+                `<td>${escapeHtml(safeString(meta.fieldName || n.label))}</td>` +
+                `<td style="font-size:11px">${ownerGroup ? `<span style="color:var(--muted);font-size:10px">${escapeHtml(ownerGroup)} \u203a </span>` : ''}${owner}</td>` +
+                `<td style="font-size:11px">${refsText}</td></tr>`;
+      }
+      html += '</tbody></table>';
+      if (fields.length > SHOW_INITIAL) {
+        html += `<button class="report-showmore" data-target="rpt-unverified-body" data-total="${fields.length}" data-expanded="0">Show all ${fields.length} bindings</button>`;
+      }
+      body.innerHTML = html;
+    }
+
+    function findCycleSCCs(graph) {
+      // Directed adjacency over object nodes. Exclude undirected table relations,
+      // field-owner edges, and field leaf nodes so only real dependency loops remain.
+      const adj = new Map();
+      const include = new Set();
+      for (const n of graph.nodes) {
+        if (n.group === 'field') continue;
+        include.add(n.id);
+        adj.set(n.id, []);
+      }
+      for (const e of graph.edges) {
+        if (e.kind === 'relation' || e.kind === 'field-owner') continue;
+        if (e.from === e.to) continue;
+        if (!include.has(e.from) || !include.has(e.to)) continue;
+        adj.get(e.from).push(e.to);
+      }
+      // Tarjan's strongly-connected-components (iterative to avoid deep recursion).
+      let index = 0;
+      const idx = new Map(), low = new Map(), onStack = new Set(), stack = [], sccs = [];
+      for (const start of adj.keys()) {
+        if (idx.has(start)) continue;
+        const call = [{ v: start, i: 0 }];
+        while (call.length) {
+          const f = call[call.length - 1];
+          const v = f.v;
+          if (f.i === 0) { idx.set(v, index); low.set(v, index); index++; stack.push(v); onStack.add(v); }
+          const ns = adj.get(v);
+          if (f.i < ns.length) {
+            const w = ns[f.i]; f.i++;
+            if (!idx.has(w)) { call.push({ v: w, i: 0 }); }
+            else if (onStack.has(w)) { low.set(v, Math.min(low.get(v), idx.get(w))); }
+          } else {
+            if (low.get(v) === idx.get(v)) {
+              const comp = []; let w;
+              do { w = stack.pop(); onStack.delete(w); comp.push(w); } while (w !== v);
+              if (comp.length > 1) sccs.push(comp);
+            }
+            call.pop();
+            if (call.length) { const p = call[call.length - 1].v; low.set(p, Math.min(low.get(p), low.get(v))); }
+          }
+        }
+      }
+      return sccs;
+    }
+
+    function renderCycles(graph, inboundIndex) {
+      const body = document.getElementById('rpt-cycles-body');
+      if (!body) return;
+      const byId = nodeMap(graph);
+      const sccs = findCycleSCCs(graph).sort((a, b) => b.length - a.length);
+      setReportSummary('rpt-cycles', 'Circular Dependencies (' + sccs.length + ')');
+      if (!sccs.length) {
+        body.innerHTML = '<div class="report-empty">No circular dependencies detected.</div>';
+        return;
+      }
+      let html = '<div class="report-disclaimer">Groups of objects that depend on each other in a loop (A \u2192 B \u2192 A), found by ' +
+        'strongly-connected-component analysis over form / report / module / query / macro references (table relationships excluded). ' +
+        'Cycles make changes risky and can cause runtime recursion \u2014 review whether each loop is intentional.</div>' +
+        '<table class="report-table"><thead><tr><th style="text-align:right">Size</th><th>Members</th></tr></thead><tbody>';
+      for (const comp of sccs) {
+        const members = comp.map(id => {
+          const c = byId.get(id);
+          return c ? `${reportGroupBadge(c.group)} ${escapeHtml(safeString(c.label))}` : escapeHtml(id);
+        }).join(' \u21c4 ');
+        html += `<tr data-node-id="${escapeHtml(comp[0])}">` +
+                `<td style="text-align:right;font-weight:600">${comp.length}</td>` +
+                `<td style="font-size:11px">${members}</td></tr>`;
+      }
+      html += '</tbody></table>';
+      body.innerHTML = html;
+    }
+
+    function renderHotspots(graph, inboundIndex) {
+      const body = document.getElementById('rpt-hotspots-body');
+      if (!body) return;
+      const SHOW_INITIAL = 15;
+      const ranked = graph.nodes
+        .filter(n => n.meta && typeof n.meta.rawSize === 'number' && n.meta.rawSize > 0)
+        .map(n => ({ node: n, size: n.meta.rawSize }))
+        .sort((a, b) => b.size - a.size);
+      setReportSummary('rpt-hotspots', 'Complexity Hotspots (' + ranked.length + ')');
+      if (!ranked.length) {
+        body.innerHTML = '<div class="report-empty">No sized object definitions available.</div>';
+        return;
+      }
+      let html = '<div class="report-disclaimer">Objects ranked by the byte size of their exported definition (form / report layout plus code-behind, ' +
+        'module source, saved query and macro text). Larger definitions concentrate the most logic and are the usual maintenance and bug hotspots. ' +
+        'Tables are not exported as text and so do not appear here.</div>' +
+        '<table class="report-table"><thead><tr><th>Group</th><th>Name</th><th style="text-align:right">Size</th></tr></thead><tbody>';
+      for (let i = 0; i < ranked.length; i++) {
+        const { node: n, size } = ranked[i];
+        const overflow = i >= SHOW_INITIAL ? ' class="report-row-hidden" data-overflow="1"' : '';
+        html += `<tr data-node-id="${escapeHtml(n.id)}"${overflow}>` +
+                `<td>${reportGroupBadge(n.group)}</td>` +
+                `<td>${escapeHtml(safeString(n.label))}</td>` +
+                `<td style="text-align:right;font-weight:600">${humanSize(size)}</td></tr>`;
+      }
+      html += '</tbody></table>';
+      if (ranked.length > SHOW_INITIAL) {
+        html += `<button class="report-showmore" data-target="rpt-hotspots-body" data-total="${ranked.length}" data-expanded="0">Show all ${ranked.length} objects</button>`;
+      }
+      body.innerHTML = html;
+    }
+
+    function renderTablesNoRel(graph, inboundIndex) {
+      const body = document.getElementById('rpt-norel-body');
+      if (!body) return;
+      const related = new Set();
+      for (const e of graph.edges) {
+        if (e.kind === 'relation') { related.add(e.from); related.add(e.to); }
+      }
+      const tables = graph.nodes
+        .filter(n => n.group === 'table' && !related.has(n.id))
+        .sort((a, b) => safeString(a.label).localeCompare(safeString(b.label)));
+      setReportSummary('rpt-norel', 'Tables Without Relationships (' + tables.length + ')');
+      if (!tables.length) {
+        body.innerHTML = '<div class="report-empty">Every table participates in at least one relationship.</div>';
+        return;
+      }
+      let html = '<div class="report-disclaimer">Tables that take part in no relationship defined in the Relationships window. ' +
+        'They may be missing referential integrity, or may legitimately be standalone lookup, staging, or temp tables. ' +
+        'Linked tables rely on their backend for constraints and are flagged below for context.</div>' +
+        '<table class="report-table"><thead><tr><th>Name</th><th style="text-align:right">Fields</th><th>Linked</th></tr></thead><tbody>';
+      for (const n of tables) {
+        const meta = n.meta || {};
+        const linked = meta.connect ? 'yes' : '';
+        const fields = meta.fieldCount != null ? meta.fieldCount : '';
+        html += `<tr data-node-id="${escapeHtml(n.id)}">` +
+                `<td>${escapeHtml(safeString(n.label))}</td>` +
+                `<td style="text-align:right">${fields}</td>` +
+                `<td style="font-size:11px;color:var(--muted)">${linked}</td></tr>`;
+      }
+      html += '</tbody></table>';
+      body.innerHTML = html;
+    }
+
+    function renderReports(graph, inboundIndex) {
+      renderBrokenObjects(graph);
+      renderOrphans(graph, inboundIndex);
+      renderInlineSQL(graph);
+      renderLinkedTables(graph);
+      renderHighFanIn(graph, inboundIndex);
+      renderDuplicateSql(graph, inboundIndex);
+      renderUnverifiedFields(graph, inboundIndex);
+      renderCycles(graph, inboundIndex);
+      renderHotspots(graph, inboundIndex);
+      renderTablesNoRel(graph, inboundIndex);
+    }
+
+    // Report interactions: row clicks navigate to node; show-more toggles overflow rows
+    document.getElementById('reportsPanel').addEventListener('click', function(e) {
+      const btn = e.target.closest('.report-showmore');
+      if (btn) {
+        const total      = parseInt(btn.getAttribute('data-total'), 10);
+        const bodyId     = btn.getAttribute('data-target');
+        const bodyEl     = document.getElementById(bodyId);
+        const isExpanded = btn.getAttribute('data-expanded') === '1';
+        const overflow   = bodyEl ? bodyEl.querySelectorAll('tr[data-overflow]') : [];
+        if (isExpanded) {
+          overflow.forEach(r => r.classList.add('report-row-hidden'));
+          btn.textContent = 'Show all ' + total + ' objects';
+          btn.setAttribute('data-expanded', '0');
+        } else {
+          overflow.forEach(r => r.classList.remove('report-row-hidden'));
+          btn.textContent = 'Show less';
+          btn.setAttribute('data-expanded', '1');
+        }
+        return;
+      }
+      const row = e.target.closest('tr[data-node-id]');
+      if (row && state.network) {
+        const nodeId = row.getAttribute('data-node-id');
+        if (nodeId) {
+          state.network.selectNodes([nodeId]);
+          state.network.focus(nodeId, { scale: 1.0, animation: { duration: 400, easingFunction: 'easeInOutQuad' } });
+          showNodeDetails(nodeId);
+          // Open the Details panel so the node details are immediately visible
+          for (const p of document.querySelectorAll('#right > details.panel')) {
+            if (p.querySelector('#details')) { p.open = true; break; }
+          }
+        }
+      }
+    });
 
     // ─── Event bindings ───
 

@@ -225,3 +225,124 @@ function Connect-AccessDB {
 
     return $script:AccessSession.App
 }
+
+function Get-AccessOfficeVersion {
+    <#
+    .SYNOPSIS
+        Best-effort detection of installed Office version and MSACCESS.EXE path.
+    .DESCRIPTION
+        Populates $script:AccessSession.OfficeVersion and .MsAccessPath.
+        Never throws. Defaults to "16.0" / $null if nothing found.
+    #>
+    [CmdletBinding()]
+    param()
+
+    # Idempotent — skip if already detected
+    if ($script:AccessSession.OfficeVersion) {
+        Write-Verbose "Office version already detected: $($script:AccessSession.OfficeVersion)"
+        return
+    }
+
+    # Defaults
+    $script:AccessSession.OfficeVersion = '16.0'
+    $script:AccessSession.MsAccessPath  = $null
+
+    try {
+        $bestVersion = $null
+        $bestPath    = $null
+
+        # Registry roots to probe: HKLM 64-bit, HKLM WOW6432 (32-bit on 64-bit OS), HKCU (per-user C2R)
+        $probes = @(
+            @{ Hive = [Microsoft.Win32.RegistryHive]::LocalMachine;  View = [Microsoft.Win32.RegistryView]::Registry64; Prefix = 'Software\Microsoft\Office' },
+            @{ Hive = [Microsoft.Win32.RegistryHive]::LocalMachine;  View = [Microsoft.Win32.RegistryView]::Registry32; Prefix = 'Software\Microsoft\Office' },
+            @{ Hive = [Microsoft.Win32.RegistryHive]::CurrentUser;   View = [Microsoft.Win32.RegistryView]::Default;    Prefix = 'Software\Microsoft\Office' }
+        )
+
+        foreach ($probe in $probes) {
+            try {
+                $baseKey = [Microsoft.Win32.RegistryKey]::OpenBaseKey($probe.Hive, $probe.View)
+                $officeKey = $baseKey.OpenSubKey($probe.Prefix)
+                if (-not $officeKey) {
+                    $baseKey.Dispose()
+                    continue
+                }
+
+                foreach ($subName in $officeKey.GetSubKeyNames()) {
+                    # Match version-like subkeys (e.g. "16.0", "15.0")
+                    if ($subName -notmatch '^\d+\.\d+$') { continue }
+
+                    try {
+                        $installRoot = $officeKey.OpenSubKey("$subName\Access\InstallRoot")
+                        if (-not $installRoot) { continue }
+
+                        $pathVal = $installRoot.GetValue('Path')
+                        $installRoot.Dispose()
+
+                        if (-not $pathVal) { continue }
+
+                        $exePath = Join-Path $pathVal 'MSACCESS.EXE'
+                        if (-not (Test-Path -LiteralPath $exePath -PathType Leaf)) { continue }
+
+                        # Pick highest version
+                        $ver = [version]$subName
+                        if ((-not $bestVersion) -or ($ver -gt $bestVersion)) {
+                            $bestVersion = $ver
+                            $bestPath    = $exePath
+                            Write-Verbose "Found Access $subName at $exePath"
+                        }
+                    }
+                    catch {
+                        # Skip individual version subkey errors
+                    }
+                }
+
+                $officeKey.Dispose()
+                $baseKey.Dispose()
+            }
+            catch {
+                # Skip probe errors
+            }
+        }
+
+        # If found via InstallRoot, apply and return
+        if ($bestVersion) {
+            $script:AccessSession.OfficeVersion = "$($bestVersion.Major).$($bestVersion.Minor)"
+            $script:AccessSession.MsAccessPath  = $bestPath
+            Write-Verbose "Detected Office version $($script:AccessSession.OfficeVersion)"
+            return
+        }
+
+        # Fallback: App Paths
+        Write-Verbose 'InstallRoot not found — trying App Paths fallback'
+        try {
+            $baseKey    = [Microsoft.Win32.RegistryKey]::OpenBaseKey(
+                [Microsoft.Win32.RegistryHive]::LocalMachine,
+                [Microsoft.Win32.RegistryView]::Registry64
+            )
+            $appPathKey = $baseKey.OpenSubKey('Software\Microsoft\Windows\CurrentVersion\App Paths\MSACCESS.EXE')
+            if ($appPathKey) {
+                $exePath = $appPathKey.GetValue('')  # (Default) value
+                $appPathKey.Dispose()
+
+                if ($exePath -and (Test-Path -LiteralPath $exePath -PathType Leaf)) {
+                    $script:AccessSession.MsAccessPath = $exePath
+
+                    # Try to parse OfficeNN from path (e.g. "...\Office16\MSACCESS.EXE")
+                    if ($exePath -match '\\Office(\d+)\\') {
+                        $script:AccessSession.OfficeVersion = "$($Matches[1]).0"
+                    }
+                    Write-Verbose "App Paths fallback: $exePath (version $($script:AccessSession.OfficeVersion))"
+                }
+            }
+            $baseKey.Dispose()
+        }
+        catch {
+            Write-Warning "App Paths fallback failed: $_"
+        }
+
+        Write-Verbose "Final Office version: $($script:AccessSession.OfficeVersion), path: $($script:AccessSession.MsAccessPath)"
+    }
+    catch {
+        Write-Warning "Office version detection failed: $_"
+    }
+}

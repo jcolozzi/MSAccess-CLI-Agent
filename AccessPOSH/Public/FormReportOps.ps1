@@ -634,3 +634,302 @@ function Set-AccessControlBatch {
 
     Format-AccessOutput -AsJson:$AsJson -Data ([ordered]@{ results = @($results) })
 }
+
+function Set-AccessTabOrder {
+    <#
+    .SYNOPSIS
+        Read / set / auto-renumber control TabIndex on a form or report.
+    .DESCRIPTION
+        Port of Python ac_manage_tab_order.
+
+        Actions:
+          get            — returns controls grouped by section, sorted by TabIndex
+          set            — assigns TabIndex 0..N-1 in the order of -TabOrder
+          auto_renumber  — re-sequences current TabIndex values to contiguous 0..N-1
+
+        Controls that don't support TabIndex (Label, Line, Rectangle, Image,
+        PageBreak, Page) are skipped silently.
+    .PARAMETER DbPath
+        Path to the Access database. Defaults to session DB.
+    .PARAMETER ObjectType
+        'form' or 'report'.
+    .PARAMETER ObjectName
+        Name of the form or report.
+    .PARAMETER Action
+        One of: get, set, auto_renumber.
+    .PARAMETER TabOrder
+        Ordered list of control names. Required when Action = 'set'.
+    .PARAMETER Section
+        Optional section filter (e.g. 'Detail', 'FormHeader', or numeric 0-8).
+    .PARAMETER AsJson
+        Return JSON string instead of PSCustomObject.
+    .EXAMPLE
+        Set-AccessTabOrder -ObjectType form -ObjectName frmMain -Action get
+    .EXAMPLE
+        Set-AccessTabOrder -ObjectType form -ObjectName frmMain -Action set -TabOrder @('txtName','txtEmail','btnSave')
+    #>
+    [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Medium')]
+    param(
+        [ValidateNotNullOrEmpty()]
+        [string]$DbPath,
+        [ValidateNotNullOrEmpty()]
+        [ValidateSet('form','report')]
+        [string]$ObjectType,
+        [ValidateNotNullOrEmpty()]
+        [string]$ObjectName,
+        [ValidateNotNullOrEmpty()]
+        [ValidateSet('get','set','auto_renumber')]
+        [string]$Action,
+        [string[]]$TabOrder,
+        [string]$Section,
+        [switch]$AsJson
+    )
+
+    $DbPath = Resolve-SessionDbPath -DbPath $DbPath -CallerName 'Set-AccessTabOrder'
+    if (-not $ObjectType) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-ObjectType is required (form, report).'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $ObjectType
+            )
+        )
+    }
+    if (-not $ObjectName) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-ObjectName is required.'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $ObjectName
+            )
+        )
+    }
+    if (-not $Action) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('-Action is required (get, set, auto_renumber).'),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $Action
+            )
+        )
+    }
+    if ($Action -eq 'set' -and (-not $TabOrder -or $TabOrder.Count -eq 0)) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new("Action 'set' requires -TabOrder (list of control names)."),
+                'MissingRequiredParameter',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $TabOrder
+            )
+        )
+    }
+
+    # Non-tabbable control types (100=Label, 101=Rectangle, 102=Line, 103=Image, 114=PageBreak, 118=Page)
+    $nonTabbable = @(100, 101, 102, 103, 114, 118)
+
+    # Section name → int map for output
+    $sectionName = @{
+        0 = 'Detail'
+        1 = 'FormHeader'
+        2 = 'FormFooter'
+        3 = 'PageHeader'
+        4 = 'PageFooter'
+        5 = 'GroupLevel1Header'
+        6 = 'GroupLevel1Footer'
+        7 = 'GroupLevel2Header'
+        8 = 'GroupLevel2Footer'
+    }
+
+    # Resolve section filter
+    [System.Nullable[int]]$sectionFilter = $null
+    if ($Section) {
+        $secKey = $Section.ToLower().Replace(' ','').Replace('_','')
+        if ($script:SECTION_MAP.ContainsKey($secKey)) {
+            $sectionFilter = $script:SECTION_MAP[$secKey]
+        } else {
+            $parsed = 0
+            if ([int]::TryParse($secKey, [ref]$parsed)) {
+                $sectionFilter = $parsed
+            } else {
+                $validNames = @($script:SECTION_MAP.Keys | Sort-Object -Unique) -join ', '
+                $PSCmdlet.ThrowTerminatingError(
+                    [System.Management.Automation.ErrorRecord]::new(
+                        [System.ArgumentException]::new("Unknown section '$Section'. Valid names: $validNames"),
+                        'InvalidSection',
+                        [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                        $Section
+                    )
+                )
+            }
+        }
+    }
+
+    $null = Connect-AccessDB -DbPath $DbPath
+    Open-InDesignView -ObjectType $ObjectType -ObjectName $ObjectName
+    try {
+        $obj = Get-DesignObject -ObjectType $ObjectType -ObjectName $ObjectName
+
+        # Gather tabbable controls
+        # Each entry: [ordered]@{ com=; name=; ctype=; section=; tab_index=; tab_stop= }
+        $ctrls = [System.Collections.Generic.List[hashtable]]::new()
+        $ctrlCount = $obj.Controls.Count
+        for ($i = 0; $i -lt $ctrlCount; $i++) {
+            try { $c = $obj.Controls($i) } catch { continue }
+            try { $ctype = [int]$c.ControlType } catch { $ctype = -1 }
+            if ($ctype -in $nonTabbable) { continue }
+
+            try { $sec = [int]$c.Section } catch { $sec = -1 }
+            if ($null -ne $sectionFilter -and $sec -ne $sectionFilter) { continue }
+
+            # Probe TabIndex — skip if not supported
+            try { $curIdx = [int]$c.TabIndex } catch { continue }
+            try { $tabStop = [bool]$c.TabStop } catch { $tabStop = $true }
+            try { $cname = $c.Name } catch { continue }
+
+            $ctrls.Add(@{
+                com       = $c
+                name      = $cname
+                ctype     = $ctype
+                section   = $sec
+                tab_index = $curIdx
+                tab_stop  = $tabStop
+            })
+        }
+
+        if ($Action -eq 'get') {
+            # Group by section, sort by TabIndex
+            $grouped = [ordered]@{}
+            foreach ($ct in $ctrls) {
+                $secLabel = if ($sectionName.ContainsKey($ct.section)) { $sectionName[$ct.section] } else { "Section$($ct.section)" }
+                if (-not $grouped.Contains($secLabel)) { $grouped[$secLabel] = [System.Collections.Generic.List[object]]::new() }
+                $grouped[$secLabel].Add([ordered]@{
+                    name         = $ct.name
+                    tab_index    = $ct.tab_index
+                    tab_stop     = $ct.tab_stop
+                    control_type = $ct.ctype
+                    type_name    = if ($script:CTRL_TYPE.ContainsKey($ct.ctype)) { $script:CTRL_TYPE[$ct.ctype] } else { "Type$($ct.ctype)" }
+                })
+            }
+            # Sort each section by tab_index
+            $sortedGrouped = [ordered]@{}
+            foreach ($key in $grouped.Keys) {
+                $sortedGrouped[$key] = @($grouped[$key] | Sort-Object { $_.tab_index })
+            }
+            $total = ($ctrls.Count)
+
+            return Format-AccessOutput -AsJson:$AsJson -Data ([ordered]@{
+                object_type    = $ObjectType
+                object_name    = $ObjectName
+                action         = 'get'
+                section_filter = $Section
+                total_controls = $total
+                sections       = $sortedGrouped
+            })
+        }
+        elseif ($Action -eq 'set') {
+            if (-not $PSCmdlet.ShouldProcess("$ObjectType '$ObjectName' TabOrder ($($TabOrder.Count) controls)", 'Set tab order')) {
+                return
+            }
+
+            # Build lookup: name(lowercase) → hashtable entry
+            $ctrlByName = @{}
+            foreach ($ct in $ctrls) {
+                $ctrlByName[$ct.name.ToLower()] = $ct
+            }
+
+            # Validate all names in TabOrder exist
+            $missing = @($TabOrder | Where-Object { -not $ctrlByName.ContainsKey($_.ToLower()) })
+            if ($missing.Count -gt 0) {
+                $available = @($ctrls | ForEach-Object { $_.name } | Sort-Object)
+                $PSCmdlet.ThrowTerminatingError(
+                    [System.Management.Automation.ErrorRecord]::new(
+                        [System.ArgumentException]::new(
+                            "Unknown control(s) in -TabOrder: $($missing -join ', '). Available tabbable controls: $($available -join ', ')"
+                        ),
+                        'InvalidControlName',
+                        [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                        $missing
+                    )
+                )
+            }
+
+            # Assign TabIndex 0..N-1 in the order of TabOrder
+            $applied = [System.Collections.Generic.List[object]]::new()
+            for ($idx = 0; $idx -lt $TabOrder.Count; $idx++) {
+                $ctrlName = $TabOrder[$idx]
+                $ct = $ctrlByName[$ctrlName.ToLower()]
+                try {
+                    $ct.com.TabIndex = $idx
+                    $applied.Add([ordered]@{ name = $ctrlName; tab_index = $idx })
+                } catch {
+                    $PSCmdlet.ThrowTerminatingError(
+                        [System.Management.Automation.ErrorRecord]::new(
+                            [System.InvalidOperationException]::new("Could not set TabIndex=$idx on '$ctrlName': $_"),
+                            'TabIndexSetFailed',
+                            [System.Management.Automation.ErrorCategory]::InvalidOperation,
+                            $ctrlName
+                        )
+                    )
+                }
+            }
+
+            return Format-AccessOutput -AsJson:$AsJson -Data ([ordered]@{
+                object_type    = $ObjectType
+                object_name    = $ObjectName
+                action         = 'set'
+                section_filter = $Section
+                applied        = @($applied)
+                count          = $applied.Count
+            })
+        }
+        else {
+            # auto_renumber
+            if (-not $PSCmdlet.ShouldProcess("$ObjectType '$ObjectName' auto-renumber TabIndex", 'Auto-renumber tab order')) {
+                return
+            }
+
+            # Group by section, sort by current TabIndex, reassign 0..N-1
+            $bySection = @{}
+            foreach ($ct in $ctrls) {
+                if (-not $bySection.ContainsKey($ct.section)) {
+                    $bySection[$ct.section] = [System.Collections.Generic.List[hashtable]]::new()
+                }
+                $bySection[$ct.section].Add($ct)
+            }
+
+            $appliedPerSection = [ordered]@{}
+            $totalCount = 0
+            foreach ($sec in ($bySection.Keys | Sort-Object)) {
+                $lst = $bySection[$sec]
+                $sorted = @($lst | Sort-Object { $_.tab_index })
+                $secLabel = if ($sectionName.ContainsKey([int]$sec)) { $sectionName[[int]$sec] } else { "Section$sec" }
+                $done = [System.Collections.Generic.List[object]]::new()
+                for ($newIdx = 0; $newIdx -lt $sorted.Count; $newIdx++) {
+                    $ct = $sorted[$newIdx]
+                    try {
+                        $ct.com.TabIndex = $newIdx
+                        $done.Add([ordered]@{ name = $ct.name; tab_index = $newIdx })
+                    } catch {
+                        Write-Warning "auto_renumber: failed on '$($ct.name)': $_"
+                    }
+                }
+                $appliedPerSection[$secLabel] = @($done)
+                $totalCount += $done.Count
+            }
+
+            return Format-AccessOutput -AsJson:$AsJson -Data ([ordered]@{
+                object_type    = $ObjectType
+                object_name    = $ObjectName
+                action         = 'auto_renumber'
+                section_filter = $Section
+                sections       = $appliedPerSection
+                count          = $totalCount
+            })
+        }
+    } finally {
+        Save-AndCloseDesign -ObjectType $ObjectType -ObjectName $ObjectName
+    }
+}

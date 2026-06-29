@@ -207,6 +207,8 @@ $script:AccessSession = @{
     VbeCodeCache   = @{}        # "type:name" → full module text
     ControlsCache  = @{}        # "type:name" → parsed control structure
     CmCache        = @{}        # "type:name" → CodeModule COM object
+    OfficeVersion  = $null      # Detected Office version string (e.g. "16.0")
+    MsAccessPath   = $null      # Full path to MSACCESS.EXE (or $null)
 }
 
 # ═══════════════════════════════════════════════════════════════════════════
