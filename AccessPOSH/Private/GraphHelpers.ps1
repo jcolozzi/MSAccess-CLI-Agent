@@ -30,6 +30,14 @@ $script:VBA_BUILTIN_NAMES = [System.Collections.Generic.HashSet[string]]::new(
     [System.StringComparer]::OrdinalIgnoreCase
 )
 
+# DAO field type number → friendly name (for field node metadata).
+$script:DAO_FIELD_TYPE = @{
+    1 = 'Boolean';  2 = 'Byte';     3 = 'Integer';  4 = 'Long'
+    5 = 'Currency'; 6 = 'Single';   7 = 'Double';   8 = 'Date/Time'
+    10 = 'Text';    11 = 'OLE';     12 = 'Memo';    15 = 'GUID'
+    16 = 'BigInt';  20 = 'Decimal'
+}
+
 # ──────────────────────────────────────────────────────────────────────
 #  Graph State Factory
 # ──────────────────────────────────────────────────────────────────────
@@ -321,7 +329,8 @@ function Save-AccessTextObject {
         $App,
         [int]$Type,
         [string]$Name,
-        [string]$Folder
+        [string]$Folder,
+        [hashtable]$GraphState
     )
 
     if (-not (Test-Path -LiteralPath $Folder)) {
@@ -340,7 +349,12 @@ function Save-AccessTextObject {
         }
     }
     catch {
-        Write-Warning ("SaveAsText failed for object '{0}': {1}" -f $Name, $_.Exception.Message)
+        $errMsg = $_.Exception.Message
+        Write-Warning ("SaveAsText failed for object '{0}': {1}" -f $Name, $errMsg)
+        if ($GraphState) {
+            $objGroup = switch ($Type) { 0 { 'table' } 1 { 'query' } 2 { 'form' } 3 { 'report' } 4 { 'macro' } 5 { 'module' } default { '' } }
+            Add-GraphWarning -GraphState $GraphState -Code 'SaveAsTextFailed' -Message ("SaveAsText failed for object '{0}': {1}" -f $Name, $errMsg) -Meta @{ owner = $Name; group = $objGroup; name = $Name; type = $Type; folder = $Folder }
+        }
         return [pscustomobject]@{
             path = $null
             hash = $null
@@ -766,7 +780,7 @@ function Add-GraphFormReportEdge {
     $parse = ConvertFrom-AccessExportTree -Path $RawPath
     $designRoot = $parse.DesignRoot
     if ($null -eq $designRoot) {
-        Add-GraphWarning -GraphState $GraphState -Code 'DesignRootMissing' -Message ("No design root found while parsing {0} '{1}'." -f $ObjectGroup, $ObjectName) -Meta @{ path = $RawPath }
+        Add-GraphWarning -GraphState $GraphState -Code 'DesignRootMissing' -Message ("No design root found while parsing {0} '{1}'." -f $ObjectGroup, $ObjectName) -Meta @{ owner = $ObjectName; group = $ObjectGroup; path = $RawPath }
         return
     }
 

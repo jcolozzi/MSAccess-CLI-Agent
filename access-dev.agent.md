@@ -100,6 +100,26 @@ New-AccessRelationship -DbPath $db -Name "rel_CustOrders" -PrimaryTable "tblCust
 Get-AccessIndex -DbPath $db -TableName "tblCustomers" -AsJson
 ```
 
+**Clone objects, search data, tab order, find definitions:**
+```powershell
+# Clone a form/report/query/macro/module/class_module
+Copy-AccessObject -DbPath $db -ObjectType form -SourceName "frmMain" -TargetName "frmMainCopy" -AsJson
+Copy-AccessObject -DbPath $db -ObjectType query -SourceName "qrySales" -TargetName "qrySalesArchive" -Overwrite -AsJson
+
+# Full-text search across table data
+Search-AccessData -DbPath $db -SearchText "Smith" -AsJson
+Search-AccessData -DbPath $db -SearchText "INV-2026" -Tables "tblOrders","tblInvoices" -MaxResultsPerTable 50 -MatchCase -AsJson
+
+# Inspect / set / auto-renumber control tab order
+Set-AccessTabOrder -DbPath $db -ObjectType form -ObjectName "frmMain" -Action get -AsJson
+Set-AccessTabOrder -DbPath $db -ObjectType form -ObjectName "frmMain" -Action set -TabOrder @('txtName','txtEmail','btnSave') -AsJson
+Set-AccessTabOrder -DbPath $db -ObjectType form -ObjectName "frmMain" -Action auto_renumber -Section "Detail" -AsJson
+
+# Find where a VBA symbol is defined (procs, vars, types, consts, controls)
+Find-AccessDefinition -DbPath $db -Symbol "CalcTotal" -AsJson
+Find-AccessDefinition -DbPath $db -Symbol "ProcessInvoices" -Kinds function,sub -ScanTypes module -FirstOnly -AsJson
+```
+
 **Maintenance:**
 ```powershell
 Repair-AccessDatabase -DbPath $db -AsJson
@@ -188,6 +208,10 @@ Send-AccessReportToPrinter -DbPath $db -ReportName "rptSales" -PrintRange pages 
 **Dependency graph:**
 ```powershell
 # Generate graph.json + interactive HTML viewer
+# The viewer includes an analysis Reports panel (broken objects, orphans, inline
+# SQL, linked tables, high fan-in, duplicate SQL, unverified fields, circular
+# dependencies, complexity hotspots, tables without relationships) and a
+# click-to-pin node popup.
 Export-AccessGraph -DbPath $db
 
 # Return the graph object to the pipeline for inspection
@@ -235,14 +259,14 @@ $g | Get-AccessGraphOrphan -Group table,query
 | Category | Functions |
 |----------|-----------|
 | **Database** | `New-AccessDatabase`, `Close-AccessDatabase`, `Repair-AccessDatabase`, `Invoke-AccessDecompile` |
-| **Objects** | `Get-AccessObject`, `Get-AccessCode`, `Set-AccessCode`, `Remove-AccessObject`, `Export-AccessStructure` |
+| **Objects** | `Get-AccessObject`, `Get-AccessCode`, `Set-AccessCode`, `Remove-AccessObject`, `Export-AccessStructure`, `Copy-AccessObject` |
 | **SQL** | `Invoke-AccessSQL`, `Invoke-AccessSQLBatch` |
-| **Tables** | `Get-AccessTableInfo`, `New-AccessTable`, `Edit-AccessTable` |
-| **VBE** | `Get-AccessVbeLine`, `Get-AccessVbeProc`, `Get-AccessVbeModuleInfo`, `Set-AccessVbeLine`, `Set-AccessVbeProc`, `Update-AccessVbeProc`, `Add-AccessVbeCode` |
-| **Search** | `Find-AccessVbeText`, `Search-AccessVbe`, `Search-AccessQuery`, `Find-AccessUsage` |
+| **Tables** | `Get-AccessTableInfo`, `New-AccessTable`, `Edit-AccessTable`, `Search-AccessData` |
+| **VBE** | `Get-AccessVbeLine`, `Get-AccessVbeProc`, `Get-AccessVbeModuleInfo`, `Set-AccessVbeLine`, `Set-AccessVbeProc`, `Update-AccessVbeProc`, `Add-AccessVbeCode`, `Import-AccessVbaFile`, `Test-AccessVbaFileEncoding` |
+| **Search** | `Find-AccessVbeText`, `Search-AccessVbe`, `Search-AccessQuery`, `Find-AccessUsage`, `Find-AccessDefinition` |
 | **VBA Exec** | `Invoke-AccessMacro`, `Invoke-AccessVba`, `Invoke-AccessEval`, `Test-AccessVbaCompile` |
 | **Forms** | `New-AccessForm`, `Get-AccessFormProperty`, `Set-AccessFormProperty` |
-| **Controls** | `Get-AccessControl`, `Get-AccessControlDetail`, `New-AccessControl`, `Remove-AccessControl`, `Set-AccessControlProperty`, `Set-AccessControlBatch` |
+| **Controls** | `Get-AccessControl`, `Get-AccessControlDetail`, `New-AccessControl`, `Remove-AccessControl`, `Set-AccessControlProperty`, `Set-AccessControlBatch`, `Set-AccessTabOrder` |
 | **Fields** | `Get-AccessFieldProperty`, `Set-AccessFieldProperty` |
 | **Linked Tables** | `Get-AccessLinkedTable`, `Set-AccessLinkedTable` |
 | **Relationships** | `Get-AccessRelationship`, `New-AccessRelationship`, `Remove-AccessRelationship` |
@@ -251,6 +275,7 @@ $g | Get-AccessGraphOrphan -Group table,query
 | **Indexes** | `Get-AccessIndex`, `Set-AccessIndex` |
 | **Properties** | `Get-AccessDatabaseProperty`, `Set-AccessDatabaseProperty`, `Get-AccessStartupOption` |
 | **Export** | `Export-AccessReport`, `Copy-AccessData` |
+| **Source** | `Export-AccessSource`, `Import-AccessSource` |
 | **UI** | `Get-AccessScreenshot`, `Send-AccessClick`, `Send-AccessKeyboard` |
 | **Tips** | `Get-AccessTip` |
 | **TempVars** | `Get-AccessTempVar`, `Set-AccessTempVar`, `Remove-AccessTempVar` |

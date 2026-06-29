@@ -6,7 +6,7 @@
 ![PowerShell: 5.1+](https://img.shields.io/badge/PowerShell-5.1%2B-blue?logo=powershell)
 ![VS Code](https://img.shields.io/badge/VS%20Code-GitHub%20Copilot%20Chat-blueviolet?logo=visual-studio-code)
 ![Functions: 108](https://img.shields.io/badge/functions-108-brightgreen)
-![Module Version](https://img.shields.io/badge/version-1.0.0-orange)
+![Module Version](https://img.shields.io/badge/version-1.1.0-orange)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 
 ## What is this?
@@ -107,6 +107,10 @@ In VS Code Copilot Chat, click the agent picker and choose **access-dev**. Open 
 | "Show me the VBA in Module1" | `Get-AccessCode` |
 | "Add error handling to the SaveRecord procedure" | `Update-AccessVbeProc` |
 | "Export the Monthly Sales report to PDF" | `Export-AccessReport` |
+| "Duplicate the frmMain form as frmMainCopy" | `Copy-AccessObject` |
+| "Search all tables for the text 'Smith'" | `Search-AccessData` |
+| "Set the tab order on frmMain" | `Set-AccessTabOrder` |
+| "Find where the ProcessInvoices procedure is defined" | `Find-AccessDefinition` |
 | "Export all objects to a src folder" | `Export-AccessSource` |
 | "Import forms and modules from the src folder" | `Import-AccessSource` |
 | "Take a screenshot of the open form" | `Get-AccessScreenshot` |
@@ -121,7 +125,7 @@ In VS Code Copilot Chat, click the agent picker and choose **access-dev**. Open 
 ```text
 MSAccess-agent/
 ├── AccessPOSH/             # PowerShell module (the engine)
-│   ├── AccessPOSH.psd1     # Module manifest (v1.0.0, PS 5.1+, Desktop + Core)
+│   ├── AccessPOSH.psd1     # Module manifest (v1.1.0, PS 5.1+, Desktop + Core)
 │   ├── AccessPOSH.psm1     # Module loader
 │   ├── Public/             # 19 files — one per command category
 │   │   ├── DatabaseOps.ps1
@@ -157,16 +161,16 @@ Invoke-Pester .\Tests\ -Output Detailed
 | Category | Functions |
 |---|---|
 | **Database** | `New-AccessDatabase`, `Close-AccessDatabase`, `Repair-AccessDatabase`, `Invoke-AccessDecompile` |
-| **Objects** | `Get-AccessObject`, `Get-AccessCode`, `Set-AccessCode`, `Remove-AccessObject`, `Export-AccessStructure` |
+| **Objects** | `Get-AccessObject`, `Get-AccessCode`, `Set-AccessCode`, `Remove-AccessObject`, `Export-AccessStructure`, `Copy-AccessObject` |
 | **SQL** | `Invoke-AccessSQL`, `Invoke-AccessSQLBatch` |
-| **Tables** | `Get-AccessTableInfo`, `New-AccessTable`, `Edit-AccessTable` |
+| **Tables** | `Get-AccessTableInfo`, `New-AccessTable`, `Edit-AccessTable`, `Search-AccessData` |
 | **Fields** | `Get-AccessFieldProperty`, `Set-AccessFieldProperty` |
 | **Indexes** | `Get-AccessIndex`, `Set-AccessIndex` |
 | **VBE** | `Get-AccessVbeLine`, `Get-AccessVbeProc`, `Get-AccessVbeModuleInfo`, `Set-AccessVbeLine`, `Set-AccessVbeProc`, `Update-AccessVbeProc`, `Add-AccessVbeCode`, `Import-AccessVbaFile`, `Test-AccessVbaFileEncoding` |
-| **Search** | `Find-AccessVbeText`, `Search-AccessVbe`, `Search-AccessQuery`, `Find-AccessUsage` |
+| **Search** | `Find-AccessVbeText`, `Search-AccessVbe`, `Search-AccessQuery`, `Find-AccessUsage`, `Find-AccessDefinition` |
 | **VBA Execution** | `Invoke-AccessMacro`, `Invoke-AccessVba`, `Invoke-AccessEval`, `Test-AccessVbaCompile` |
 | **Forms** | `New-AccessForm`, `Get-AccessFormProperty`, `Set-AccessFormProperty` |
-| **Controls** | `Get-AccessControl`, `Get-AccessControlDetail`, `New-AccessControl`, `Remove-AccessControl`, `Set-AccessControlProperty`, `Set-AccessControlBatch` |
+| **Controls** | `Get-AccessControl`, `Get-AccessControlDetail`, `New-AccessControl`, `Remove-AccessControl`, `Set-AccessControlProperty`, `Set-AccessControlBatch`, `Set-AccessTabOrder` |
 | **Linked Tables** | `Get-AccessLinkedTable`, `Set-AccessLinkedTable` |
 | **Relationships** | `Get-AccessRelationship`, `New-AccessRelationship`, `Remove-AccessRelationship` |
 | **References** | `Get-AccessReference`, `Set-AccessReference` |

@@ -174,7 +174,7 @@ function Export-AccessGraph {
                 }
             }
             catch {
-                Add-GraphWarning -GraphState $gs -Code 'FieldEnumFailed' -Message ("Could not enumerate fields for table '{0}': {1}" -f $tableName, $_.Exception.Message)
+                Add-GraphWarning -GraphState $gs -Code 'FieldEnumFailed' -Message ("Could not enumerate fields for table '{0}': {1}" -f $tableName, $_.Exception.Message) -Meta @{ owner = $tableName; group = 'table' }
             }
 
             # SaveAsText does not support acTable — skip raw export
@@ -190,7 +190,9 @@ function Export-AccessGraph {
 
             if ($FieldNodeMode -eq 'AllTableFields') {
                 foreach ($field in $tableDef.Fields) {
-                    New-GraphFieldNode -GraphState $gs -OwnerNodeId $tableNodeId -OwnerGroup 'table' -OwnerName $tableName -FieldName ([string]$field.Name) -Verified $true -DataType ([string]$field.Type) -FieldNodeMode $FieldNodeMode | Out-Null
+                    $fieldType = try { [int]$field.Type } catch { -1 }
+                    $fieldTypeName = if ($script:DAO_FIELD_TYPE.ContainsKey($fieldType)) { $script:DAO_FIELD_TYPE[$fieldType] } else { "Type$fieldType" }
+                    New-GraphFieldNode -GraphState $gs -OwnerNodeId $tableNodeId -OwnerGroup 'table' -OwnerName $tableName -FieldName ([string]$field.Name) -Verified $true -DataType $fieldTypeName -FieldNodeMode $FieldNodeMode | Out-Null
                 }
             }
         }
@@ -228,7 +230,7 @@ function Export-AccessGraph {
 
             $rawInfo = [pscustomobject]@{ path = $null; hash = $null; size = 0 }
             if ($keepRaw) {
-                $rawInfo = Save-AccessTextObject -App $app -Type $AC_TYPE.Query -Name $queryName -Folder (Join-Path $rawDir 'queries')
+                $rawInfo = Save-AccessTextObject -App $app -Type $AC_TYPE.Query -Name $queryName -Folder (Join-Path $rawDir 'queries') -GraphState $gs
             }
 
             $sqlText = try { [string]$queryDef.SQL } catch { '' }
@@ -257,7 +259,7 @@ function Export-AccessGraph {
             if (-not $Quiet) { Write-Progress -Activity 'Export-AccessGraph' -Status "Exporting form ($formIdx/$formTotal): $name" -PercentComplete $pct }
 
             $folder = if ($keepRaw) { Join-Path $rawDir 'forms' } else { [System.IO.Path]::GetTempPath() }
-            $rawInfo = Save-AccessTextObject -App $app -Type $AC_TYPE.Form -Name $name -Folder $folder
+            $rawInfo = Save-AccessTextObject -App $app -Type $AC_TYPE.Form -Name $name -Folder $folder -GraphState $gs
             if (-not $keepRaw -and $rawInfo.path) { $tempPaths.Add($rawInfo.path) }
 
             $nodeId = Get-GraphObjectId -Group 'form' -Name $name
@@ -281,7 +283,7 @@ function Export-AccessGraph {
             if (-not $Quiet) { Write-Progress -Activity 'Export-AccessGraph' -Status "Exporting report ($reportIdx/$reportTotal): $name" -PercentComplete $pct }
 
             $folder = if ($keepRaw) { Join-Path $rawDir 'reports' } else { [System.IO.Path]::GetTempPath() }
-            $rawInfo = Save-AccessTextObject -App $app -Type $AC_TYPE.Report -Name $name -Folder $folder
+            $rawInfo = Save-AccessTextObject -App $app -Type $AC_TYPE.Report -Name $name -Folder $folder -GraphState $gs
             if (-not $keepRaw -and $rawInfo.path) { $tempPaths.Add($rawInfo.path) }
 
             $nodeId = Get-GraphObjectId -Group 'report' -Name $name
@@ -303,7 +305,7 @@ function Export-AccessGraph {
             $rawInfo = [pscustomobject]@{ path = $null; hash = $null; size = 0 }
             if ($keepRaw -or -not $DisableMacroHeuristics) {
                 $folder = if ($keepRaw) { Join-Path $rawDir 'macros' } else { [System.IO.Path]::GetTempPath() }
-                $rawInfo = Save-AccessTextObject -App $app -Type $AC_TYPE.Macro -Name $name -Folder $folder
+                $rawInfo = Save-AccessTextObject -App $app -Type $AC_TYPE.Macro -Name $name -Folder $folder -GraphState $gs
                 if (-not $keepRaw -and $rawInfo.path) { $tempPaths.Add($rawInfo.path) }
             }
 
@@ -326,7 +328,7 @@ function Export-AccessGraph {
             $rawInfo = [pscustomobject]@{ path = $null; hash = $null; size = 0 }
             if ($keepRaw -or -not $DisableCodeHeuristics) {
                 $folder = if ($keepRaw) { Join-Path $rawDir 'modules' } else { [System.IO.Path]::GetTempPath() }
-                $rawInfo = Save-AccessTextObject -App $app -Type $AC_TYPE.Module -Name $name -Folder $folder
+                $rawInfo = Save-AccessTextObject -App $app -Type $AC_TYPE.Module -Name $name -Folder $folder -GraphState $gs
                 if (-not $keepRaw -and $rawInfo.path) { $tempPaths.Add($rawInfo.path) }
 
                 # Cache module code for cross-module call detection
@@ -381,7 +383,7 @@ function Export-AccessGraph {
                 Add-GraphFormReportEdge -GraphState $gs -ObjectGroup 'form' -ObjectName $name -RawPath $rawPath -SqlFolder $sqlFolder -KnownDataNames $knownDataNames -FieldNodeMode $FieldNodeMode -DisableCodeHeuristics:$DisableCodeHeuristics
             }
             catch {
-                Add-GraphWarning -GraphState $gs -Code 'FormEdgeParseFailed' -Message ("Failed to parse form edges for '{0}': {1}" -f $name, $_.Exception.Message)
+                Add-GraphWarning -GraphState $gs -Code 'FormEdgeParseFailed' -Message ("Failed to parse form edges for '{0}': {1}" -f $name, $_.Exception.Message) -Meta @{ owner = $name; group = 'form' }
             }
         }
 
@@ -394,7 +396,7 @@ function Export-AccessGraph {
                 Add-GraphFormReportEdge -GraphState $gs -ObjectGroup 'report' -ObjectName $name -RawPath $rawPath -SqlFolder $sqlFolder -KnownDataNames $knownDataNames -FieldNodeMode $FieldNodeMode -DisableCodeHeuristics:$DisableCodeHeuristics
             }
             catch {
-                Add-GraphWarning -GraphState $gs -Code 'ReportEdgeParseFailed' -Message ("Failed to parse report edges for '{0}': {1}" -f $name, $_.Exception.Message)
+                Add-GraphWarning -GraphState $gs -Code 'ReportEdgeParseFailed' -Message ("Failed to parse report edges for '{0}': {1}" -f $name, $_.Exception.Message) -Meta @{ owner = $name; group = 'report' }
             }
         }
 
