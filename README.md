@@ -200,7 +200,7 @@ Pull requests are welcome. For significant changes, open an issue first to discu
 
 - Original MCP server: [unmateria/MCP-Access](https://github.com/unmateria/MCP-Access)
 - PowerShell port and VS Code agent integration: Access-POSH
-- Reports contributed by GPGeorge: https://github.com/Grover-Park-Consulting
+- Dependency Graph Reports contributed by GPGeorge: https://github.com/Grover-Park-Consulting
 
 ## License
 
