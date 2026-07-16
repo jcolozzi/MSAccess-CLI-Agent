@@ -1,6 +1,6 @@
 # Graphify output and cache
 graphify-out/
-.graphify_python/
+.graphify_python
 
 # PowerShell
 *.ps1xml.bak
