@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionEnd": [
+      {
+        "type": "command",
+        "powershell": ".github/hooks/session-auto-commit/auto-commit.ps1",
+        "timeoutSec": 30
+      }
+    ]
+  }
+}

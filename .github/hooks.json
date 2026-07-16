@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "type": "command",
+        "powershell": ".github/hooks/session-logger/log-session-start.ps1",
+        "cwd": ".",
+        "timeoutSec": 5
+      }
+    ],
+    "userPromptSubmitted": [
+      {
+        "type": "command",
+        "powershell": ".github/hooks/session-logger/log-prompt.ps1",
+        "cwd": ".",
+        "env": {
+          "LOG_LEVEL": "INFO"
+        },
+        "timeoutSec": 5
+      }
+    ],
+    "sessionEnd": [
+      {
+        "type": "command",
+        "powershell": ".github/hooks/session-logger/log-session-end.ps1",
+        "cwd": ".",
+        "timeoutSec": 5
+      },
+      {
+        "type": "command",
+        "powershell": ".github/hooks/session-auto-commit/auto-commit.ps1",
+        "timeoutSec": 30
+      }
+    ]
+  }
+}
